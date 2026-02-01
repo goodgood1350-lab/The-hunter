@@ -15,6 +15,25 @@
             font-style: italic;
         }
         
+        /* 高分顯示 */
+        #high-score { 
+            position: absolute; top: 5%; right: 5%; 
+            color: #fff; text-shadow: 3px 3px 0px #f0932b; 
+            font-size: 24px; z-index: 10; pointer-events: none; 
+            font-style: italic;
+        }
+        
+        /* 開始畫面 */
+        #start-screen { 
+            position: absolute; top: 50%; left: 50%; 
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95); 
+            color: #2f3542; padding: 40px; text-align: center;
+            border-radius: 30px; 
+            box-shadow: 0 20px 0px #e67e22; z-index: 20; width: 280px;
+            backdrop-filter: blur(5px);
+        }
+        
         /* 遊戲結束畫面 */
         #game-over { 
             position: absolute; top: 50%; left: 50%; 
@@ -51,6 +70,13 @@
 <body>
 
 <div id="ui">SCORE: <span id="score">0</span></div>
+<div id="high-score">HIGH: <span id="high-score-value">0</span></div>
+
+<div id="start-screen">
+    <h1>Subway Run 3D</h1>
+    <p>Ultimate Edition</p>
+    <button onclick="startGame()">START RUNNING</button>
+</div>
 
 <div id="game-over">
     <h1>BUSTED!</h1>
@@ -59,7 +85,21 @@
     <button onclick="location.reload()">RUN AGAIN</button>
 </div>
 
-<div id="controls-hint">Swipe or use Arrow Keys to Move/Jump</div>
+<div id="controls-hint">Swipe or use Arrow Keys to Move/Jump/Slide</div>
+
+<!-- 音效元素 -->
+<audio id="bg-music" loop>
+    <source src="https://example.com/path/to/background-music.mp3" type="audio/mpeg">
+</audio>
+<audio id="coin-sound">
+    <source src="https://example.com/path/to/coin-collect.mp3" type="audio/mpeg">
+</audio>
+<audio id="jump-sound">
+    <source src="https://example.com/path/to/jump.mp3" type="audio/mpeg">
+</audio>
+<audio id="collision-sound">
+    <source src="https://example.com/path/to/collision.mp3" type="audio/mpeg">
+</audio>
 
 <!-- Import Map: 修正為具體的 Three.js 版本以確保穩定運行 -->
 <script type="importmap">
@@ -80,15 +120,18 @@ const CONFIG = {
     BASE_SPEED: 0.6,     // 初始速度
     GRAVITY: 0.015,      // 重力
     JUMP_FORCE: 0.4,     // 跳躍力道
-    SPEED_INC: 0.00005   // 隨分數增加的速度
+    SLIDE_DURATION: 1.0, // 滑行持續時間
+    SPEED_INC: 0.00005,  // 隨分數增加的速度
+    POWERUP_CHANCE: 0.1  // 電源出現機率
 };
 
 // --- 全局變數 ---
 let scene, camera, renderer, clock;
 let player, inspector; // 角色
-let obstacles = [], tracks = [], coins = [];
-let score = 0, isGameOver = false;
+let obstacles = [], tracks = [], coins = [], powerups = [];
+let score = 0, highScore = localStorage.getItem('highScore') || 0, isGameOver = false, isGameStarted = false;
 let gameSpeed = CONFIG.BASE_SPEED;
+document.getElementById('high-score-value').innerText = highScore;
 
 // 玩家狀態
 let playerState = { 
@@ -96,6 +139,8 @@ let playerState = {
     y: 0,           // 高度
     vy: 0,          // 垂直速度
     isJumping: false, 
+    isSliding: false, // 滑行狀態
+    slideTimer: 0,
     currentX: 0,    // 平滑移動用的當前 X
     stumble: 0      // 絆倒狀態計時器 (大於0表示被絆倒，保安會靠近)
 };
@@ -165,7 +210,7 @@ function createHumanoid(color, isInspector = false) {
     group.add(body);
 
     // 頭部
-    const headGeo = new THREE.BoxGeometry(0.9, 0.9, 0.9);
+    const headGeo = new THREE.SphereGeometry(0.45, 16, 16);
     const headMat = new THREE.MeshToonMaterial({ color: 0xffccaa }); // 皮膚色
     const head = new THREE.Mesh(headGeo, headMat);
     head.position.y = 2.8;
@@ -181,16 +226,22 @@ function createHumanoid(color, isInspector = false) {
     const rLeg = new THREE.Mesh(limbGeo, limbMat); rLeg.position.set(0.4, 0.6, 0);
     group.add(lLeg, rLeg);
 
+    // 手臂
+    const lArm = new THREE.Mesh(limbGeo, limbMat); lArm.position.set(-0.8, 1.8, 0);
+    const rArm = new THREE.Mesh(limbGeo, limbMat); rArm.position.set(0.8, 1.8, 0);
+    group.add(lArm, rArm);
+
     // 保安特徵
     if (isInspector) {
         // 帽子
-        const cap = new THREE.Mesh(new THREE.BoxGeometry(1, 0.3, 1.2), new THREE.MeshToonMaterial({ color: 0x2d3436 }));
-        cap.position.set(0, 3.3, 0.1);
+        const cap = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.5, 16), new THREE.MeshToonMaterial({ color: 0x2d3436 }));
+        cap.position.set(0, 3.3, 0);
         group.add(cap);
     } else {
         // 玩家帽子 (反戴鴨舌帽)
         const hat = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.2, 0.95), new THREE.MeshToonMaterial({ color: 0xff7675 }));
         hat.position.set(0, 3.3, 0);
+        hat.rotation.y = Math.PI; // 反戴
         group.add(hat);
     }
 
@@ -204,7 +255,7 @@ function createPlayer() {
 
 function createInspector() {
     inspector = createHumanoid(0x2d3436, true); // 黑色制服
-    inspector.position.z = 8; // 初始在玩家身後 (靠近鏡頭)
+    inspector.position.z = 8; // 初始在玩家身後
     scene.add(inspector);
 }
 
@@ -221,6 +272,13 @@ function createEnvironment() {
     rightWall.position.set(12, 5, -100);
     
     scene.add(leftWall, rightWall);
+
+    // 添加遠景雲朵或建築以增加深度 (簡單平面)
+    const skyGeo = new THREE.PlaneGeometry(100, 50);
+    const skyMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
+    const sky = new THREE.Mesh(skyGeo, skyMat);
+    sky.position.set(0, 30, -100);
+    scene.add(sky);
 }
 
 function spawnTrackSection(zPos) {
@@ -253,26 +311,31 @@ function generateObstacles(zBase) {
     // 隨機決定每一道生成什麼
     const availableLanes = [0, 1, 2];
     
-    // 隨機選擇 1~2 個車道生成障礙
-    const obsCount = Math.random() > 0.6 ? 2 : 1;
+    // 隨機選擇 1~3 個車道生成障礙 (增加多樣性)
+    const obsCount = Math.floor(Math.random() * 3) + 1;
     
     for(let i=0; i<obsCount; i++) {
         if(availableLanes.length === 0) break;
         const laneIdx = availableLanes.splice(Math.floor(Math.random() * availableLanes.length), 1)[0];
         const x = CONFIG.LANES[laneIdx];
         
-        // 30% 機率是火車，70% 是路障
-        if (Math.random() > 0.7) {
+        // 多種障礙類型: 20% 火車, 40% 路障, 20% 高欄杆 (需滑行避開), 20% 電源
+        const rand = Math.random();
+        if (rand < 0.2) {
             spawnTrain(x, zBase);
-        } else {
+        } else if (rand < 0.6) {
             spawnBarrier(x, zBase);
+        } else if (rand < 0.8) {
+            spawnHighBarrier(x, zBase); // 新: 高欄杆, 需滑行
+        } else if (Math.random() < CONFIG.POWERUP_CHANCE) {
+            spawnPowerup(x, zBase); // 新: 電源
         }
     }
 
     // 剩下的車道生成金幣
     availableLanes.forEach(laneIdx => {
         if(Math.random() > 0.3) {
-            spawnCoins(CONFIG.LANES[laneIdx], zBase);
+            spawnCoins(CONFIG.LANES[laneIdx], zBase, Math.random() > 0.5 ? 'line' : 'arc'); // 新: 直線或弧形金幣
         }
     });
 }
@@ -310,20 +373,41 @@ function spawnBarrier(x, z) {
     leg2.position.x = 1.2;
     barrier.add(leg1, leg2);
 
-    barrier.userData = { type: 'barrier', fatal: false }; // 撞到路障不會立刻死，但會絆倒
+    barrier.userData = { type: 'barrier', fatal: false, height: 'low' }; // 低障礙, 跳躍避開
     scene.add(barrier);
     obstacles.push(barrier);
 }
 
-function spawnCoins(x, zBase) {
-    // 一排金幣
-    for(let i=0; i<3; i++) {
+function spawnHighBarrier(x, z) {
+    const barrier = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 0.5), new THREE.MeshToonMaterial({ color: 0xc0392b }));
+    barrier.position.set(x, 1.5, z);
+    barrier.castShadow = true;
+
+    barrier.userData = { type: 'high_barrier', fatal: false, height: 'high' }; // 高障礙, 滑行避開
+    scene.add(barrier);
+    obstacles.push(barrier);
+}
+
+function spawnPowerup(x, z) {
+    const powerup = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), new THREE.MeshToonMaterial({ color: 0x00ff00 }));
+    powerup.position.set(x, 1.5, z);
+    scene.add(powerup);
+    powerups.push(powerup);
+}
+
+function spawnCoins(x, zBase, pattern = 'line') {
+    const numCoins = Math.floor(Math.random() * 3) + 3; // 3~5 個金幣
+    for(let i=0; i<numCoins; i++) {
         const coin = new THREE.Mesh(
             new THREE.CylinderGeometry(0.4, 0.4, 0.1, 16), 
             new THREE.MeshToonMaterial({ color: 0xf1c40f, shininess: 100 })
         );
         coin.rotation.z = Math.PI / 2;
-        coin.position.set(x, 1.5, zBase + (i * 3)); // 間隔排列
+        if (pattern === 'arc') {
+            coin.position.set(x, 1.5 + Math.sin(i / numCoins * Math.PI) * 2, zBase + i * 2);
+        } else {
+            coin.position.set(x, 1.5, zBase + i * 2);
+        }
         
         scene.add(coin);
         coins.push(coin);
@@ -332,7 +416,7 @@ function spawnCoins(x, zBase) {
 
 // --- 遊戲邏輯 ---
 function animate() {
-    if (isGameOver) return;
+    if (!isGameStarted || isGameOver) return requestAnimationFrame(animate);
     
     requestAnimationFrame(animate);
     
@@ -356,21 +440,37 @@ function animate() {
         }
     }
     
+    // 滑行邏輯
+    if (playerState.isSliding) {
+        playerState.slideTimer -= delta;
+        if (playerState.slideTimer <= 0) {
+            playerState.isSliding = false;
+            player.scale.y = 1; // 恢復高度
+            player.position.y = playerState.y;
+        } else {
+            player.scale.y = 0.5; // 蹲下
+            player.position.y = playerState.y * 0.5;
+        }
+    }
+
     // 左右平滑移動 (Lerp)
     const targetX = CONFIG.LANES[playerState.lane];
     playerState.currentX += (targetX - playerState.currentX) * 10 * delta;
     
     player.position.set(playerState.currentX, playerState.y, 0);
     
-    // 跑步動畫 (簡單的上下浮動與傾斜)
-    if (!playerState.isJumping) {
-        player.position.y += Math.sin(Date.now() * 0.015) * 0.1;
+    // 跑步動畫 (手臂與腿擺動)
+    if (!playerState.isJumping && !playerState.isSliding) {
+        const time = Date.now() * 0.015;
+        player.children[3].rotation.z = Math.sin(time) * 0.5; // 左腿
+        player.children[4].rotation.z = -Math.sin(time) * 0.5; // 右腿
+        player.children[5].rotation.z = -Math.sin(time) * 0.5; // 左手
+        player.children[6].rotation.z = Math.sin(time) * 0.5; // 右手
+        player.position.y += Math.sin(time) * 0.1;
     }
     player.rotation.z = (playerState.currentX - targetX) * -0.1; // 轉向時身體傾斜
 
     // 3. 保安追逐邏輯
-    // 如果 stumble > 0，保安靠近 (Z軸變小，接近0)；否則退後 (Z軸變大，接近8)
-    // 這裡 Z=0 是玩家位置，Z>0 是鏡頭方向。保安在 Z=8 (遠) -> Z=2 (近)
     if (playerState.stumble > 0) {
         playerState.stumble -= delta;
         inspector.position.z += (2 - inspector.position.z) * 5 * delta; // 快速逼近
@@ -379,46 +479,54 @@ function animate() {
     }
     
     inspector.position.x += (player.position.x - inspector.position.x) * 5 * delta; // 跟隨玩家 X
-    inspector.position.y = player.position.y; // 跟隨跳躍 (簡化)
+    inspector.position.y = player.position.y; // 跟隨跳躍
 
     // 4. 物件移動 (世界向後捲動)
     updateObjects(obstacles, true);
     updateObjects(coins, false);
+    updateObjects(powerups, false, true); // 電源更新
     updateTracks();
 
     renderer.render(scene, camera);
 }
 
-function updateObjects(list, isObstacle) {
+function updateObjects(list, isObstacle, isPowerup = false) {
     for (let i = list.length - 1; i >= 0; i--) {
         const obj = list[i];
-        obj.position.z += gameSpeed; // 物件向 +Z 移動 (靠近鏡頭)
+        obj.position.z += gameSpeed; // 物件向 +Z 移動
 
-        // 旋轉金幣
+        // 旋轉金幣或電源
         if (!isObstacle) obj.rotation.x += 0.05;
 
         // 碰撞檢測
-        // 簡單的 AABB 檢測：當 Z 軸非常接近且 X 軸在同一道
         if (Math.abs(obj.position.z - player.position.z) < 1.0) { // Z軸重疊
             const xDist = Math.abs(obj.position.x - player.position.x);
             
             if (isObstacle) {
                 if (xDist < 1.0) { // X軸重疊
-                    // 檢查高度 (是否跳過)
-                    // 路障高度約 1.2，玩家跳起 y > 1.2 可避開
-                    if (obj.userData.type === 'barrier' && player.position.y > 1.3) {
-                        // 成功跳過
+                    // 根據類型與玩家狀態判斷
+                    if (obj.userData.height === 'low' && player.position.y > 1.3) {
+                        // 跳過低障礙
+                    } else if (obj.userData.height === 'high' && playerState.isSliding) {
+                        // 滑過高障礙
                     } else {
                         handleCollision(obj);
                     }
                 }
+            } else if (isPowerup) {
+                if (xDist < 1.5 && Math.abs(player.position.y - obj.position.y) < 1.5) {
+                    scene.remove(obj);
+                    list.splice(i, 1);
+                    activatePowerup(); // 新: 激活電源效果
+                }
             } else {
-                // 吃金幣 (判定範圍稍大)
+                // 吃金幣
                 if (xDist < 1.5 && Math.abs(player.position.y - obj.position.y) < 1.5) {
                     scene.remove(obj);
                     list.splice(i, 1);
                     score += 10;
                     document.getElementById('score').innerText = score;
+                    document.getElementById('coin-sound').play();
                 }
             }
         }
@@ -432,31 +540,42 @@ function updateObjects(list, isObstacle) {
 }
 
 function handleCollision(obj) {
+    document.getElementById('collision-sound').play();
     if (obj.userData.fatal) {
         // 撞火車：直接結束
         gameOver();
     } else {
-        // 撞路障
+        // 撞障礙
         if (playerState.stumble > 0) {
             // 已經絆倒過，這次被抓到
             gameOver();
         } else {
             // 第一次絆倒
             playerState.stumble = 3.0; // 保安追逐 3 秒
-            // 視覺回饋：閃爍或震動 (這裡簡化為減速)
-            scene.remove(obj); // 撞碎路障
+            // 視覺回饋：閃爍
+            player.visible = false;
+            setTimeout(() => player.visible = true, 100);
+            setTimeout(() => player.visible = false, 200);
+            setTimeout(() => player.visible = true, 300);
+            scene.remove(obj);
             const idx = obstacles.indexOf(obj);
             if(idx > -1) obstacles.splice(idx, 1);
         }
     }
 }
 
+function activatePowerup() {
+    // 示例: 雙倍分數 10 秒 (可擴展更多類型)
+    const originalInc = CONFIG.SPEED_INC;
+    CONFIG.SPEED_INC *= 2;
+    setTimeout(() => CONFIG.SPEED_INC = originalInc, 10000);
+}
+
 function updateTracks() {
     tracks.forEach(t => {
         t.position.z += gameSpeed;
-        if (t.position.z > 20) { // 超出鏡頭
-            t.position.z -= 240; // 移回遠方 (6段 * 40長度)
-            // 只有地面塊需要觸發生成新障礙 (避免線條重複觸發)
+        if (t.position.z > 20) { 
+            t.position.z -= 240; 
             if (t.geometry.type === 'PlaneGeometry' && t.geometry.parameters.width > 10) {
                 generateObstacles(t.position.z);
             }
@@ -468,21 +587,28 @@ function gameOver() {
     isGameOver = true;
     document.getElementById('game-over').style.display = 'block';
     document.getElementById('final-score').innerText = score;
+    if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('highScore', highScore);
+        document.getElementById('high-score-value').innerText = highScore;
+    }
     
-    // 簡單的死亡動畫：玩家倒下
+    // 死亡動畫：玩家倒下
     player.rotation.x = -Math.PI / 2;
     player.position.y = 0.5;
+    document.getElementById('bg-music').pause();
 }
 
 // --- 操作控制 ---
 function setupControls() {
     // 鍵盤
     window.addEventListener('keydown', (e) => {
-        if (isGameOver) return;
+        if (isGameOver || !isGameStarted) return;
         switch(e.key) {
             case 'ArrowLeft': moveLane(-1); break;
             case 'ArrowRight': moveLane(1); break;
             case 'ArrowUp': jump(); break;
+            case 'ArrowDown': slide(); break;
             case ' ': jump(); break;
         }
     });
@@ -495,7 +621,7 @@ function setupControls() {
     }, {passive: false});
 
     window.addEventListener('touchend', e => {
-        if (isGameOver) return;
+        if (isGameOver || !isGameStarted) return;
         const endX = e.changedTouches[0].clientX;
         const endY = e.changedTouches[0].clientY;
         const diffX = endX - startX;
@@ -509,6 +635,7 @@ function setupControls() {
         } else {
             // 垂直滑動
             if (diffY < -30) jump(); // 上滑跳躍
+            if (diffY > 30) slide(); // 下滑滑行
         }
     }, {passive: false});
 }
@@ -521,9 +648,17 @@ function moveLane(dir) {
 }
 
 function jump() {
-    if (!playerState.isJumping) {
+    if (!playerState.isJumping && !playerState.isSliding) {
         playerState.isJumping = true;
         playerState.vy = CONFIG.JUMP_FORCE;
+        document.getElementById('jump-sound').play();
+    }
+}
+
+function slide() {
+    if (!playerState.isSliding && !playerState.isJumping) {
+        playerState.isSliding = true;
+        playerState.slideTimer = CONFIG.SLIDE_DURATION;
     }
 }
 
@@ -531,6 +666,13 @@ function onResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function startGame() {
+    isGameStarted = true;
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('bg-music').play();
+    animate();
 }
 
 // 啟動遊戲
