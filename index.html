@@ -6,35 +6,66 @@
     <title>Subway Run 3D - Ultimate Edition</title>
     <style>
         body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial Black', sans-serif; touch-action: none; user-select: none; }
-        #ui { position: absolute; top: 5%; left: 5%; color: #fff; text-shadow: 0 0 10px #f0932b; font-size: 32px; z-index: 10; font-style: italic; pointer-events: none; }
-        #combo { position: absolute; top: 12%; left: 5%; color: #ffeb3b; font-size: 20px; transition: transform 0.2s; z-index: 10; }
-        #high-score { position: absolute; top: 5%; right: 5%; color: #74b9ff; font-size: 20px; z-index: 10; }
         
-        #overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; color: white; transition: 0.3s; }
-        .card { background: #fff; color: #2d3436; padding: 40px; border-radius: 30px; text-align: center; width: 280px; border-bottom: 8px solid #f0932b; }
-        h1 { margin: 0; color: #e17055; font-size: 40px; line-height: 1; }
-        button { background: #f0932b; color: white; border: none; padding: 15px 0; width: 100%; font-size: 24px; border-radius: 15px; cursor: pointer; margin-top: 25px; box-shadow: 0 6px 0 #d35400; font-weight: bold; }
-        button:active { transform: translateY(4px); box-shadow: 0 2px 0 #d35400; }
+        /* UI 層 */
+        #ui-layer { position: absolute; inset: 0; pointer-events: none; z-index: 10; display: flex; flex-direction: column; justify-content: space-between; padding: 20px; }
         
-        /* 掃描線效果增強氛圍 */
-        #crt:after { content: " "; display: block; position: absolute; top: 0; left: 0; bottom: 0; right: 0; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03)); z-index: 2; background-size: 100% 4px, 3px 100%; pointer-events: none; }
+        /* 分數與連擊 */
+        .hud-top { display: flex; justify-content: space-between; align-items: flex-start; }
+        #score-box { color: #fff; text-shadow: 0 0 10px #0984e3; font-style: italic; }
+        #score-label { font-size: 14px; color: #74b9ff; letter-spacing: 2px; }
+        #score { font-size: 42px; line-height: 1; }
+        
+        #combo-box { text-align: right; transform-origin: right center; transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        #combo-label { font-size: 14px; color: #ffeaa7; letter-spacing: 1px; }
+        #combo-val { font-size: 36px; color: #fdcb6e; text-shadow: 0 0 15px #e17055; }
+        
+        /* 遊戲結束與選單 */
+        #overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100; transition: opacity 0.3s; backdrop-filter: blur(5px); }
+        .card { background: linear-gradient(145deg, #2d3436, #000000); border: 2px solid #0984e3; color: white; padding: 40px; border-radius: 20px; text-align: center; width: 300px; box-shadow: 0 0 30px rgba(9, 132, 227, 0.3); transform: translateY(0); transition: transform 0.3s; }
+        h1 { margin: 0; font-size: 48px; background: linear-gradient(to right, #74b9ff, #0984e3); -webkit-background-clip: text; color: transparent; font-style: italic; }
+        p { color: #b2bec3; margin: 10px 0 30px; }
+        
+        button { background: #0984e3; color: white; border: none; padding: 15px 0; width: 100%; font-size: 20px; border-radius: 10px; cursor: pointer; font-weight: bold; text-transform: uppercase; letter-spacing: 2px; box-shadow: 0 5px 0 #065289; transition: all 0.1s; pointer-events: auto; }
+        button:active { transform: translateY(4px); box-shadow: 0 1px 0 #065289; }
+        
+        /* CRT 掃描線特效 (復古濾鏡) */
+        #crt-effect { position: absolute; inset: 0; z-index: 5; pointer-events: none; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.1) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06)); background-size: 100% 3px, 3px 100%; opacity: 0.6; }
+        
+        /* 傷害紅屏特效 */
+        #damage-flash { position: absolute; inset: 0; background: red; opacity: 0; pointer-events: none; z-index: 8; transition: opacity 0.1s; mix-blend-mode: overlay; }
     </style>
 </head>
 <body>
 
-<div id="crt"></div>
-<div id="ui">SCORE: <span id="score">0</span></div>
-<div id="combo">COMBO x<span id="combo-val">1</span></div>
-<div id="high-score">BEST: <span id="high-score-val">0</span></div>
+<!-- 視覺特效層 -->
+<div id="crt-effect"></div>
+<div id="damage-flash"></div>
 
-<div id="overlay">
-    <div class="card" id="menu-card">
-        <h1>SUBWAY<br>SURGE</h1>
-        <p>Avoid trains. Don't get caught.</p>
-        <button id="start-btn">START RUN</button>
+<!-- UI 層 -->
+<div id="ui-layer">
+    <div class="hud-top">
+        <div id="score-box">
+            <div id="score-label">SCORE</div>
+            <div id="score">0</div>
+        </div>
+        <div id="combo-box">
+            <div id="combo-label">COMBO</div>
+            <div id="combo-val">x1</div>
+        </div>
     </div>
 </div>
 
+<!-- 選單層 -->
+<div id="overlay">
+    <div class="card" id="menu-card">
+        <h1>NEON<br>RUNNER</h1>
+        <p>Swipe to Dodge. Don't Look Back.</p>
+        <button id="start-btn">INITIATE RUN</button>
+    </div>
+</div>
+
+<!-- Three.js 引入 -->
 <script type="importmap">
 { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
 </script>
@@ -42,274 +73,452 @@
 <script type="module">
 import * as THREE from 'three';
 
-// --- 核心配置 ---
+// --- 遊戲參數配置 ---
 const CONFIG = {
-    LANES: [-3.8, 0, 3.8],
-    INIT_SPEED: 0.8,
-    MAX_SPEED: 2.2,
-    GRAVITY: 0.018,
-    JUMP_V: 0.42,
-    SPEED_STEP: 0.0001
+    LANES: [-3.5, 0, 3.5],   // 車道 X 座標
+    INIT_SPEED: 0.7,         // 初始速度
+    MAX_SPEED: 2.5,          // 最大速度
+    GRAVITY: 0.022,          // 重力
+    JUMP_FORCE: 0.45,        // 跳躍力
+    SPEED_STEP: 0.00015,     // 速度增量
+    SHAKE_DECAY: 0.9         // 震動衰減
 };
 
-let scene, camera, renderer, player, hunter, clock;
-let score = 0, highScore = localStorage.getItem('run_high') || 0;
-let isPlaying = false, combo = 1, currentSpeed = CONFIG.INIT_SPEED;
-let obstacles = [], tracks = [], coins = [];
-let pState = { lane: 1, y: 0, vy: 0, jumping: false, sliding: false, slideTime: 0, x: 0, stumble: 0 };
+// --- 全局變數 ---
+let scene, camera, renderer, clock;
+let player, hunter;
+let obstacles = [], tracks = [], coins = [], particles = [];
+let score = 0, highScore = localStorage.getItem('neon_run_high') || 0;
+let isPlaying = false, isGameOver = false;
+let currentSpeed = CONFIG.INIT_SPEED;
+let combo = 1;
 
-// 震動效果控制
-let shakeIntensity = 0;
+// 玩家物理狀態
+let pState = { 
+    lane: 1, y: 0, vy: 0, x: 0, 
+    jumping: false, sliding: false, slideTime: 0, 
+    stumble: 0, // 絆倒計時 (影響保安距離)
+    invincible: 0 // 無敵時間
+};
+
+// 視覺特效狀態
+let shakeIntensity = 0; // 相機震動強度
 
 function init() {
+    // 1. 場景初始化
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x0a3d62);
-    scene.fog = new THREE.Fog(0x0a3d62, 20, 150);
+    scene.background = new THREE.Color(0x050510); // 深夜色
+    scene.fog = new THREE.FogExp2(0x050510, 0.025); // 濃霧
 
-    camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 500);
-    camera.position.set(0, 8, 14);
-    camera.lookAt(0, 3, -5);
+    // 2. 相機
+    camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 100);
+    camera.position.set(0, 6, 11);
+    camera.lookAt(0, 2, -5);
 
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    // 3. 渲染器
+    renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     document.body.appendChild(renderer.domElement);
 
-    // 光照 - 霓虹夜色風格
-    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
-    const mainLight = new THREE.PointLight(0xf0932b, 2, 100);
-    mainLight.position.set(0, 20, 10);
+    // 4. 燈光 (霓虹風格)
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
+    scene.add(ambientLight);
+    
+    // 主光源 (暖色路燈)
+    const mainLight = new THREE.DirectionalLight(0xff9f43, 1.5);
+    mainLight.position.set(10, 20, 10);
+    mainLight.castShadow = true;
     scene.add(mainLight);
 
+    // 玩家自帶光源 (藍色科技感)
+    const playerLight = new THREE.PointLight(0x0984e3, 2, 15);
+    playerLight.position.set(0, 4, 2);
+    scene.add(playerLight);
+
+    // 5. 創建角色與環境
     createPlayer();
     createHunter();
-    buildEnvironment();
-    
-    document.getElementById('high-score-val').innerText = highScore;
-    document.getElementById('start-btn').onclick = startRun;
-    
-    clock = new THREE.Clock();
+    buildInitialWorld();
+
+    // 6. 事件綁定
+    document.getElementById('start-btn').onclick = startGame;
     setupControls();
     window.addEventListener('resize', onResize);
+
+    // 7. 啟動循環
+    clock = new THREE.Clock();
     animate();
 }
 
+// --- 角色創建 ---
 function createPlayer() {
     player = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.6, 0.8), new THREE.MeshToonMaterial({color: 0x0984e3}));
-    body.position.y = 1.3;
+    
+    // 身體 (發光材質)
+    const bodyGeo = new THREE.BoxGeometry(1, 1.4, 0.6);
+    const bodyMat = new THREE.MeshPhongMaterial({ color: 0x0984e3, emissive: 0x0984e3, emissiveIntensity: 0.2 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.y = 1.2;
     body.castShadow = true;
-    player.add(body);
     
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 12), new THREE.MeshToonMaterial({color: 0xffccaa}));
-    head.position.y = 2.6;
-    player.add(head);
+    // 頭部
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshPhongMaterial({ color: 0xffffff }));
+    head.position.y = 2.2;
     
+    // 噴射背包 (裝飾)
+    const jetpack = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.3), new THREE.MeshPhongMaterial({ color: 0x555555 }));
+    jetpack.position.set(0, 1.4, 0.4);
+    
+    player.add(body, head, jetpack);
     scene.add(player);
 }
 
 function createHunter() {
     hunter = new THREE.Group();
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.8, 1), new THREE.MeshToonMaterial({color: 0x2d3436}));
+    
+    // 身體 (暗色)
+    const body = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.8, 0.8), new THREE.MeshPhongMaterial({ color: 0x2d3436 }));
     body.position.y = 1.4;
-    hunter.add(body);
-    const light = new THREE.SpotLight(0xff0000, 5, 20); // 警示燈
-    light.position.set(0, 3, 0);
-    hunter.add(light);
-    hunter.position.z = 10;
+    
+    // 警示燈 (紅色)
+    const lightGeo = new THREE.CylinderGeometry(0.1, 0.2, 0.2);
+    const lightMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+    const siren = new THREE.Mesh(lightGeo, lightMat);
+    siren.position.set(0.4, 2.4, 0);
+    
+    // 實際紅光
+    const spotLight = new THREE.SpotLight(0xff0000, 10, 15, 0.6, 0.5, 1);
+    spotLight.position.set(0, 4, 0);
+    spotLight.target.position.set(0, 0, -5);
+    hunter.add(spotLight.target);
+    
+    hunter.add(body, siren, spotLight);
+    hunter.position.z = 8; // 初始距離
     scene.add(hunter);
 }
 
-function buildEnvironment() {
-    // 兩側建築/牆壁
-    const wallGeo = new THREE.BoxGeometry(2, 40, 500);
-    const wallMat = new THREE.MeshPhongMaterial({color: 0x1e272e});
-    const lW = new THREE.Mesh(wallGeo, wallMat); lW.position.set(-12, 10, -100);
-    const rW = new THREE.Mesh(wallGeo, wallMat); rW.position.set(12, 10, -100);
-    scene.add(lW, rW);
+// --- 世界生成 ---
+function buildInitialWorld() {
+    // 兩側建築牆
+    const wallGeo = new THREE.BoxGeometry(2, 20, 200);
+    const wallMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+    const leftWall = new THREE.Mesh(wallGeo, wallMat); leftWall.position.set(-10, 5, -80);
+    const rightWall = new THREE.Mesh(wallGeo, wallMat); rightWall.position.set(10, 5, -80);
+    scene.add(leftWall, rightWall);
 
-    // 初始賽道
-    for(let i=0; i<5; i++) createTrackPart(i * -40);
+    // 地面與軌道
+    for(let i=0; i<6; i++) spawnTrackSection(i * -40);
 }
 
-function createTrackPart(z) {
+function spawnTrackSection(z) {
     const ground = new THREE.Mesh(
-        new THREE.PlaneGeometry(20, 42),
-        new THREE.MeshPhongMaterial({color: 0x2c3e50})
+        new THREE.PlaneGeometry(20, 40),
+        new THREE.MeshPhongMaterial({ color: 0x1e272e, shininess: 10 }) // 濕潤路面感
     );
     ground.rotation.x = -Math.PI/2;
     ground.position.z = z;
     ground.receiveShadow = true;
     scene.add(ground);
     tracks.push(ground);
+    
+    // 裝飾線 (Neon Lines)
+    const line = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 40), new THREE.MeshBasicMaterial({ color: 0x00cec9 }));
+    line.rotation.x = -Math.PI/2;
+    line.position.set(-3.5/2, 0.02, z);
+    scene.add(line);
+    tracks.push(line); // 簡單處理，一起回收
 
-    if (z < -20) {
-        const lane = Math.floor(Math.random()*3);
-        if (Math.random() > 0.4) spawnObstacle(CONFIG.LANES[lane], z);
-        else spawnCoin(CONFIG.LANES[lane], z);
+    if (z < -20) generateObstacles(z);
+}
+
+function generateObstacles(z) {
+    const lanes = [0, 1, 2];
+    const count = Math.random() > 0.7 ? 2 : 1;
+    
+    for(let i=0; i<count; i++) {
+        const laneIdx = lanes.splice(Math.floor(Math.random()*lanes.length), 1)[0];
+        const x = CONFIG.LANES[laneIdx];
+        
+        if (Math.random() > 0.5) {
+            // 火車 (致命)
+            const train = new THREE.Group();
+            const body = new THREE.Mesh(new THREE.BoxGeometry(3.2, 4, 10), new THREE.MeshPhongMaterial({ color: 0xd63031 }));
+            body.position.y = 2;
+            const light = new THREE.Mesh(new THREE.CircleGeometry(0.6, 16), new THREE.MeshBasicMaterial({ color: 0xfffa65 }));
+            light.position.set(0, 1.5, 5.1);
+            train.add(body, light);
+            train.position.set(x, 0, z);
+            train.userData = { fatal: true, hitBox: {w: 3, h: 4, d: 10} };
+            scene.add(train);
+            obstacles.push(train);
+        } else {
+            // 路障 (絆倒)
+            const barrier = new THREE.Mesh(new THREE.BoxGeometry(3, 1.2, 0.5), new THREE.MeshPhongMaterial({ color: 0xfdcb6e }));
+            barrier.position.set(x, 0.6, z);
+            barrier.castShadow = true;
+            barrier.userData = { fatal: false, hitBox: {w: 3, h: 1.2, d: 0.5} };
+            scene.add(barrier);
+            obstacles.push(barrier);
+        }
+    }
+    
+    // 剩餘車道放金幣
+    lanes.forEach(l => {
+        if(Math.random() > 0.3) spawnCoins(CONFIG.LANES[l], z);
+    });
+}
+
+function spawnCoins(x, z) {
+    for(let i=0; i<3; i++) {
+        const coin = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.4, 0.4, 0.1, 16),
+            new THREE.MeshBasicMaterial({ color: 0xffeb3b })
+        );
+        coin.rotation.z = Math.PI/2;
+        coin.position.set(x, 1.5, z + i*2.5);
+        scene.add(coin);
+        coins.push(coin);
     }
 }
 
-function spawnObstacle(x, z) {
-    let type = Math.random();
-    let mesh;
-    if (type > 0.6) { // 火車 (高障礙)
-        mesh = new THREE.Group();
-        const body = new THREE.Mesh(new THREE.BoxGeometry(3.5, 5, 12), new THREE.MeshPhongMaterial({color: 0xe17055}));
-        const neon = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.2, 12), new THREE.MeshBasicMaterial({color: 0x00d2d3}));
-        neon.position.y = 1; mesh.add(body, neon);
-        mesh.position.set(x, 2.5, z);
-        mesh.userData = { fatal: true, hitBox: [1.7, 2.5, 6] };
-    } else { // 路障 (低障礙)
-        mesh = new THREE.Mesh(new THREE.BoxGeometry(3, 1.5, 0.8), new THREE.MeshPhongMaterial({color: 0xfdcb6e}));
-        mesh.position.set(x, 0.75, z);
-        mesh.userData = { fatal: false, hitBox: [1.5, 0.75, 0.4] };
-    }
-    scene.add(mesh);
-    obstacles.push(mesh);
-}
-
-function spawnCoin(x, z) {
-    const coin = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.15, 8, 16), new THREE.MeshPhongMaterial({color: 0xffeb3b, emissive: 0xffeb3b, emissiveIntensity: 0.5}));
-    coin.position.set(x, 1.5, z);
-    coin.rotation.y = Math.PI/2;
-    scene.add(coin);
-    coins.push(coin);
-}
-
+// --- 核心循環 ---
 function animate() {
     requestAnimationFrame(animate);
     const delta = clock.getDelta();
 
-    if (isPlaying) {
+    if (isPlaying && !isGameOver) {
+        // 1. 遊戲進程
         score += Math.floor(currentSpeed * combo);
         currentSpeed = Math.min(CONFIG.MAX_SPEED, currentSpeed + CONFIG.SPEED_STEP);
+        
         document.getElementById('score').innerText = score;
+
+        // 2. 玩家物理
+        handlePlayerPhysics(delta);
+
+        // 3. 追逐者 AI (重點：絆倒時靠近)
+        let targetHunterZ = 8; // 默認安全距離
+        if (pState.stumble > 0) {
+            pState.stumble -= delta;
+            targetHunterZ = 3.5; // 絆倒時非常近
+        }
+        // 平滑移動保安
+        hunter.position.z += (targetHunterZ - hunter.position.z) * 2 * delta;
+        hunter.position.x += (player.position.x - hunter.position.x) * 5 * delta;
         
-        // 1. 物理系統
-        if (pState.jumping) {
-            pState.vy -= CONFIG.GRAVITY;
-            pState.y += pState.vy;
-            if (pState.y <= 0) { pState.y = 0; pState.jumping = false; }
-        }
-        if (pState.sliding) {
-            pState.slideTime -= delta;
-            if (pState.slideTime <= 0) { pState.sliding = false; player.scale.y = 1; }
-        }
-
-        pState.x += (CONFIG.LANES[pState.lane] - pState.x) * 0.2;
-        player.position.set(pState.x, pState.y, 0);
-        player.rotation.z = (pState.x - CONFIG.LANES[pState.lane]) * -0.05;
-
-        // 2. 追逐者 AI
-        let hunterZ = (pState.stumble > 0) ? 4 : 10;
-        if (pState.stumble > 0) pState.stumble -= delta;
-        hunter.position.z += (hunterZ - hunter.position.z) * 0.05;
-        hunter.position.x = player.position.x;
-
-        // 3. 環境位移與碰撞
+        // 4. 世界移動
         updateWorld(currentSpeed);
-        
-        // 4. 相機震動回饋
+
+        // 5. 相機震動 (Screen Shake)
         if (shakeIntensity > 0) {
-            camera.position.x = Math.random() * shakeIntensity;
-            camera.position.y = 8 + Math.random() * shakeIntensity;
-            shakeIntensity *= 0.9;
+            camera.position.x = (Math.random() - 0.5) * shakeIntensity;
+            camera.position.y = 6 + (Math.random() - 0.5) * shakeIntensity;
+            shakeIntensity *= CONFIG.SHAKE_DECAY; // 逐漸衰減
+            if (shakeIntensity < 0.05) shakeIntensity = 0;
         } else {
-            camera.position.x = 0;
-            camera.position.y = 8;
+            // 平滑回正
+            camera.position.x += (0 - camera.position.x) * 0.1;
+            camera.position.y += (6 - camera.position.y) * 0.1;
         }
     }
+
     renderer.render(scene, camera);
 }
 
-function updateWorld(s) {
-    obstacles.forEach((obj, i) => {
-        obj.position.z += s;
-        // AABB 碰撞
-        const dx = Math.abs(obj.position.x - player.position.x);
-        const dz = Math.abs(obj.position.z - player.position.z);
-        if (dx < 1.5 && dz < 1.5) {
-            if (obj.userData.fatal && pState.y < 3) doGameOver();
-            else if (!obj.userData.fatal && !pState.jumping) {
-                pState.stumble = 1.5;
-                shakeIntensity = 0.5;
-                combo = 1; updateComboUI();
+function handlePlayerPhysics(dt) {
+    // 跳躍
+    if (pState.jumping) {
+        pState.vy -= CONFIG.GRAVITY;
+        pState.y += pState.vy;
+        if (pState.y <= 0) { pState.y = 0; pState.jumping = false; }
+    }
+    
+    // 滑行
+    if (pState.sliding) {
+        pState.slideTime -= dt;
+        if (pState.slideTime <= 0) {
+            pState.sliding = false;
+            player.scale.y = 1;
+            player.position.y = pState.y + 1.2; // 修正模型中心
+        } else {
+            player.scale.y = 0.5;
+        }
+    }
+
+    // 車道切換 (Lerp)
+    pState.x += (CONFIG.LANES[pState.lane] - pState.x) * 15 * dt;
+    
+    // 更新模型位置
+    player.position.x = pState.x;
+    player.position.y = pState.y + (pState.sliding ? 0.6 : 1.2); // 調整中心點
+    
+    // 跑步傾斜效果
+    player.rotation.z = (pState.x - CONFIG.LANES[pState.lane]) * -0.15;
+}
+
+function updateWorld(speed) {
+    // 移動障礙物
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+        let obj = obstacles[i];
+        obj.position.z += speed;
+        
+        // 碰撞檢測
+        if (Math.abs(obj.position.z - player.position.z) < 2 && Math.abs(obj.position.x - player.position.x) < 1.5) {
+            if (Math.abs(player.position.y - obj.position.y) < 2) {
+                hitObstacle(obj);
             }
         }
-        if (obj.position.z > 20) { scene.remove(obj); obstacles.splice(i, 1); }
-    });
+        
+        if (obj.position.z > 15) { scene.remove(obj); obstacles.splice(i, 1); }
+    }
 
-    coins.forEach((c, i) => {
-        c.position.z += s;
+    // 移動金幣
+    for (let i = coins.length - 1; i >= 0; i--) {
+        let c = coins[i];
+        c.position.z += speed;
         c.rotation.y += 0.1;
-        if (player.position.distanceTo(c.position) < 2) {
-            scene.remove(c); coins.splice(i, 1); 
-            score += 500; combo++; updateComboUI();
+        
+        // 吃金幣
+        if (c.position.distanceTo(player.position) < 1.5) {
+            scene.remove(c); coins.splice(i, 1);
+            score += 100;
+            combo = Math.min(combo + 1, 10); // 上限 x10
+            updateComboUI();
         }
-        if (c.position.z > 20) { scene.remove(c); coins.splice(i, 1); }
-    });
+        
+        if (c.position.z > 15) { scene.remove(c); coins.splice(i, 1); }
+    }
 
+    // 無限跑道
     tracks.forEach(t => {
-        t.position.z += s;
+        t.position.z += speed;
         if (t.position.z > 40) {
-            t.position.z -= 200;
-            createTrackPart(t.position.z - 40);
+            t.position.z -= 240;
+            if (t.geometry.type === 'PlaneGeometry') spawnTrackSection(t.position.z - 40);
         }
     });
+}
+
+function hitObstacle(obj) {
+    if (pState.invincible > 0) return;
+
+    if (obj.userData.fatal) {
+        // 致命撞擊
+        triggerShake(1.5); // 強烈震動
+        gameOver();
+    } else {
+        // 絆倒 (非致命)
+        if (pState.stumble > 0) {
+            // 如果已經絆倒還沒恢復，再次撞擊 = 死亡
+            gameOver();
+        } else {
+            pState.stumble = 2.0; // 絆倒 2 秒
+            currentSpeed = CONFIG.INIT_SPEED; // 速度重置
+            combo = 1; // 連擊中斷
+            updateComboUI();
+            triggerShake(0.8); // 中等震動
+            
+            // 紅屏閃爍
+            const flash = document.getElementById('damage-flash');
+            flash.style.opacity = 0.5;
+            setTimeout(() => flash.style.opacity = 0, 100);
+            
+            // 短暫無敵防止連續判定
+            pState.invincible = 0.5;
+            setTimeout(() => pState.invincible = 0, 500);
+            
+            // 移除該障礙物以免卡住
+            scene.remove(obj);
+            obstacles = obstacles.filter(o => o !== obj);
+        }
+    }
+}
+
+function triggerShake(intensity) {
+    shakeIntensity = intensity;
 }
 
 function updateComboUI() {
     const el = document.getElementById('combo-val');
-    el.innerText = combo;
-    document.getElementById('combo').style.transform = "scale(1.3)";
-    setTimeout(() => document.getElementById('combo').style.transform = "scale(1)", 200);
+    const box = document.getElementById('combo-box');
+    el.innerText = 'x' + combo;
+    el.style.color = combo > 5 ? '#ff7675' : '#fdcb6e';
+    
+    // CSS 動畫
+    box.style.transform = 'scale(1.5)';
+    setTimeout(() => box.style.transform = 'scale(1)', 150);
 }
 
+// --- 控制系統 ---
 function setupControls() {
     let sX, sY;
+    
+    // 觸控
     window.addEventListener('touchstart', e => { sX = e.touches[0].clientX; sY = e.touches[0].clientY; });
     window.addEventListener('touchend', e => {
+        if (!isPlaying) return;
         const dX = e.changedTouches[0].clientX - sX;
         const dY = e.changedTouches[0].clientY - sY;
         if (Math.abs(dX) > Math.abs(dY)) {
-            if (dX > 40 && pState.lane < 2) pState.lane++;
-            else if (dX < -40 && pState.lane > 0) pState.lane--;
+            if (dX > 30 && pState.lane > 0) pState.lane--; // 注意：ThreeJS 座標系反向
+            if (dX < -30 && pState.lane < 2) pState.lane++;
         } else {
-            if (dY < -40 && !pState.jumping) { pState.jumping = true; pState.vy = CONFIG.JUMP_V; }
-            if (dY > 40) { pState.sliding = true; pState.slideTime = 0.6; player.scale.y = 0.5; }
+            if (dY < -30) jump();
+            if (dY > 30) slide();
         }
     });
+
+    // 鍵盤
     window.addEventListener('keydown', e => {
-        if (e.key === 'ArrowLeft' && pState.lane > 0) pState.lane--;
-        if (e.key === 'ArrowRight' && pState.lane < 2) pState.lane++;
-        if (e.key === 'ArrowUp' && !pState.jumping) { pState.jumping = true; pState.vy = CONFIG.JUMP_V; }
-        if (e.key === 'ArrowDown') { pState.sliding = true; pState.slideTime = 0.6; player.scale.y = 0.5; }
+        if (!isPlaying) return;
+        if (e.key === 'ArrowLeft' && pState.lane < 2) pState.lane++;
+        if (e.key === 'ArrowRight' && pState.lane > 0) pState.lane--;
+        if (e.key === 'ArrowUp') jump();
+        if (e.key === 'ArrowDown') slide();
     });
 }
 
-function startRun() {
-    document.getElementById('overlay').style.opacity = '0';
-    setTimeout(() => {
-        document.getElementById('overlay').style.display = 'none';
-        isPlaying = true;
-    }, 300);
+function jump() {
+    if (!pState.jumping && !pState.sliding) {
+        pState.jumping = true;
+        pState.vy = CONFIG.JUMP_FORCE;
+    }
 }
 
-function doGameOver() {
-    isPlaying = false;
-    if (score > highScore) {
-        highScore = score;
-        localStorage.setItem('run_high', highScore);
+function slide() {
+    if (!pState.sliding && !pState.jumping) {
+        pState.sliding = true;
+        pState.slideTime = 0.8;
     }
+}
+
+function startGame() {
+    document.getElementById('overlay').style.opacity = 0;
+    setTimeout(() => document.getElementById('overlay').style.display = 'none', 300);
+    
+    // 重置狀態
+    score = 0; combo = 1; currentSpeed = CONFIG.INIT_SPEED;
+    pState = { lane: 1, y: 0, vy: 0, x: 0, jumping: false, sliding: false, slideTime: 0, stumble: 0, invincible: 0 };
+    obstacles.forEach(o => scene.remove(o)); obstacles = [];
+    coins.forEach(c => scene.remove(c)); coins = [];
+    
+    isPlaying = true;
+    isGameOver = false;
+    updateComboUI();
+}
+
+function gameOver() {
+    isPlaying = false;
+    isGameOver = true;
     document.getElementById('overlay').style.display = 'flex';
-    document.getElementById('overlay').style.opacity = '1';
+    setTimeout(() => document.getElementById('overlay').style.opacity = 1, 10);
+    
     document.getElementById('menu-card').innerHTML = `
-        <h1 style="color:#d63031">BUSTED!</h1>
-        <p>Score: ${score}</p>
-        <p>Combo Max: ${combo}</p>
-        <button onclick="location.reload()">TRY AGAIN</button>
+        <h1 style="color:#d63031">CRASHED!</h1>
+        <p>Final Score: ${score}</p>
+        <button onclick="location.reload()">REBOOT SYSTEM</button>
     `;
 }
 
