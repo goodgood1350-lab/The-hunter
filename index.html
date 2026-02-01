@@ -5,103 +5,110 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Subway Run 3D - Ultimate Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #2f3542; font-family: 'Arial Black', sans-serif; touch-action: none; user-select: none; }
+        body { 
+            margin: 0; overflow: hidden; background: linear-gradient(to bottom, #81ecec, #74b9ff); 
+            font-family: 'Arial Black', sans-serif; touch-action: none; user-select: none; 
+        }
         
-        /* UI 介面 */
-        #ui { 
-            position: absolute; top: 5%; left: 5%; 
-            color: #fff; text-shadow: 3px 3px 0px #f0932b; 
-            font-size: 32px; z-index: 10; pointer-events: none; 
+        /* UI 容器 */
+        #ui-container { 
+            position: absolute; top: 5%; left: 5%; opacity: 0; transition: opacity 0.5s ease-in-out;
+            color: #fff; text-shadow: 3px 3px 0px #f0932b; font-size: 32px; z-index: 10; pointer-events: none; 
+            font-style: italic;
+        }
+        #score-display { font-size: 36px; }
+        
+        #high-score { 
+            position: absolute; top: 5%; right: 5%; opacity: 1; 
+            color: #fff; text-shadow: 3px 3px 0px #f0932b; font-size: 24px; z-index: 10; pointer-events: none; 
             font-style: italic;
         }
         
-        /* 高分顯示 */
-        #high-score { 
-            position: absolute; top: 5%; right: 5%; 
-            color: #fff; text-shadow: 3px 3px 0px #f0932b; 
-            font-size: 24px; z-index: 10; pointer-events: none; 
-            font-style: italic;
+        #mult-ui { 
+            position: absolute; top: 12%; left: 5%; display: none;
+            color: #ffd700; text-shadow: 2px 2px 0px #000; font-size: 28px; z-index: 10; pointer-events: none; 
+            font-style: italic; font-weight: bold;
         }
         
         /* 開始畫面 */
         #start-screen { 
-            position: absolute; top: 50%; left: 50%; 
-            transform: translate(-50%, -50%);
-            background: rgba(255, 255, 255, 0.95); 
-            color: #2f3542; padding: 40px; text-align: center;
-            border-radius: 30px; 
-            box-shadow: 0 20px 0px #e67e22; z-index: 20; width: 280px;
-            backdrop-filter: blur(5px);
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95); color: #2f3542; padding: 50px 40px; text-align: center;
+            border-radius: 30px; box-shadow: 0 20px 0px #e67e22; z-index: 20; width: 300px;
+            backdrop-filter: blur(10px);
         }
+        #start-screen h1 { 
+            animation: bounce 2s infinite; margin: 0 0 20px 0; color: #c0392b; text-transform: uppercase; 
+        }
+        #start-screen button { 
+            animation: pulse 1.5s infinite; background: linear-gradient(45deg, #f0932b, #e67e22); 
+            color: white; border: none; padding: 18px 35px; font-size: 26px; border-radius: 20px; 
+            cursor: pointer; width: 100%; box-shadow: 0 10px 0px #d35400; font-weight: bold;
+            transition: transform 0.1s, box-shadow 0.1s;
+        }
+        #start-screen button:active { transform: translateY(5px); box-shadow: 0 5px 0px #d35400; }
         
         /* 遊戲結束畫面 */
         #game-over { 
-            position: absolute; top: 50%; left: 50%; 
-            transform: translate(-50%, -50%);
-            background: rgba(255, 255, 255, 0.95); 
-            color: #2f3542; padding: 40px; text-align: center;
-            display: none; border-radius: 30px; 
-            box-shadow: 0 20px 0px #e67e22; z-index: 20; width: 280px;
-            backdrop-filter: blur(5px);
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.95); color: #2f3542; padding: 40px; text-align: center;
+            display: none; border-radius: 30px; box-shadow: 0 20px 0px #e67e22; z-index: 20; width: 300px;
+            backdrop-filter: blur(10px);
         }
-        
-        h1 { margin: 0 0 10px 0; color: #c0392b; text-transform: uppercase; }
-        
-        button { 
-            background: #f0932b; color: white; border: none; 
-            padding: 15px 30px; font-size: 24px; border-radius: 15px; 
-            cursor: pointer; margin-top: 20px; width: 100%; 
-            box-shadow: 0 8px 0px #d35400; font-weight: bold;
-            transition: transform 0.1s, box-shadow 0.1s;
+        #game-over h1 { margin: 0 0 10px 0; color: #c0392b; text-transform: uppercase; }
+        #new-best { color: #ffd700; font-size: 24px; font-weight: bold; animation: glow 1s infinite alternate; }
+        @keyframes glow { 0% { text-shadow: 0 0 5px #ffd700; } 100% { text-shadow: 0 0 20px #ffd700; } }
+        #game-over button { 
+            background: linear-gradient(45deg, #f0932b, #e67e22); color: white; border: none; 
+            padding: 15px 30px; font-size: 24px; border-radius: 15px; cursor: pointer; margin-top: 20px; width: 100%; 
+            box-shadow: 0 8px 0px #d35400; font-weight: bold; transition: transform 0.1s, box-shadow 0.1s;
         }
-        
-        button:active { 
-            transform: translateY(4px); 
-            box-shadow: 0 4px 0px #d35400; 
+        #game-over button:active { transform: translateY(4px); box-shadow: 0 4px 0px #d35400; }
+
+        /* 動畫 */
+        @keyframes bounce { 
+            0%, 20%, 50%, 80%, 100% { transform: translateY(0); } 
+            40% { transform: translateY(-15px); } 60% { transform: translateY(-8px); } 
+        }
+        @keyframes pulse { 
+            0% { box-shadow: 0 0 0 0 rgba(240, 147, 43, 0.7); } 
+            70% { box-shadow: 0 0 0 20px rgba(240, 147, 43, 0); } 
+            100% { box-shadow: 0 0 0 0 rgba(240, 147, 43, 0); } 
         }
 
-        /* 操作提示 (僅在電腦版顯示) */
+        /* 操作提示 */
         #controls-hint {
             position: absolute; bottom: 20px; width: 100%; text-align: center;
-            color: rgba(255,255,255,0.5); font-size: 14px; pointer-events: none;
+            color: rgba(255,255,255,0.8); font-size: 16px; pointer-events: none;
+            text-shadow: 1px 1px 2px #000;
         }
     </style>
 </head>
 <body>
 
-<div id="ui">SCORE: <span id="score">0</span></div>
+<div id="ui-container">
+    <div>SCORE: <span id="score">0</span></div>
+    <div id="mult-ui">x <span id="mult-val">1</span></div>
+</div>
 <div id="high-score">HIGH: <span id="high-score-value">0</span></div>
 
 <div id="start-screen">
     <h1>Subway Run 3D</h1>
     <p>Ultimate Edition</p>
-    <button onclick="startGame()">START RUNNING</button>
+    <button id="start-btn">START RUNNING</button>
+    <p style="font-size:14px; margin-top:20px; opacity:0.7;">Swipe left/right to change lanes, up to jump, down to slide</p>
 </div>
 
 <div id="game-over">
-    <h1>BUSTED!</h1>
+    <h1 id="go-title">BUSTED!</h1>
     <p>The Inspector caught you!</p>
     <p style="font-size:24px; color:#2c3e50;">Score: <span id="final-score">0</span></p>
-    <button onclick="location.reload()">RUN AGAIN</button>
+    <div id="new-best" style="display:none;"></div>
+    <button id="restart-btn">RUN AGAIN</button>
 </div>
 
-<div id="controls-hint">Swipe or use Arrow Keys to Move/Jump/Slide</div>
+<div id="controls-hint">← → Move | ↑ Jump | ↓ Slide</div>
 
-<!-- 音效元素 -->
-<audio id="bg-music" loop>
-    <source src="https://example.com/path/to/background-music.mp3" type="audio/mpeg">
-</audio>
-<audio id="coin-sound">
-    <source src="https://example.com/path/to/coin-collect.mp3" type="audio/mpeg">
-</audio>
-<audio id="jump-sound">
-    <source src="https://example.com/path/to/jump.mp3" type="audio/mpeg">
-</audio>
-<audio id="collision-sound">
-    <source src="https://example.com/path/to/collision.mp3" type="audio/mpeg">
-</audio>
-
-<!-- Import Map: 修正為具體的 Three.js 版本以確保穩定運行 -->
 <script type="importmap">
 {
     "imports": {
@@ -113,135 +120,161 @@
 <script type="module">
 import * as THREE from 'three';
 
-// --- 遊戲配置 ---
+// --- 遊戲配置 (參考 Subway Surfers) ---
 const CONFIG = {
-    LANE_WIDTH: 3.5,     // 車道寬度
-    LANES: [-3.5, 0, 3.5], // 三條車道的 X 座標
-    BASE_SPEED: 0.6,     // 初始速度
-    GRAVITY: 0.015,      // 重力
-    JUMP_FORCE: 0.4,     // 跳躍力道
-    SLIDE_DURATION: 1.0, // 滑行持續時間
-    SPEED_INC: 0.00005,  // 隨分數增加的速度
-    POWERUP_CHANCE: 0.1  // 電源出現機率
+    LANE_WIDTH: 3.5,
+    LANES: [-3.5, 0, 3.5],
+    BASE_SPEED: 0.5,
+    GRAVITY: 0.018,
+    JUMP_FORCE: 0.38,
+    SLIDE_DURATION: 1.2,
+    SPEED_INC: 0.00004,
+    POWERUP_DURATION: 10,
+    POWERUP_CHANCE: 0.15,
+    BONUS_PERFECT: 50,
+    COIN_BONUS: 300,
+    DISTANCE_MULT: 180
 };
 
 // --- 全局變數 ---
-let scene, camera, renderer, clock;
-let player, inspector; // 角色
+let scene, camera, renderer, clock, audioCtx;
+let player, inspector, playerBodyMat;
 let obstacles = [], tracks = [], coins = [], powerups = [];
-let score = 0, highScore = localStorage.getItem('highScore') || 0, isGameOver = false, isGameStarted = false;
+let score = 0, highScore = parseInt(localStorage.getItem('subwayRunHighScore') || '0'), isGameOver = false, isGameStarted = false, paused = false;
 let gameSpeed = CONFIG.BASE_SPEED;
-document.getElementById('high-score-value').innerText = highScore;
+document.getElementById('high-score-value').innerText = highScore.toLocaleString();
 
 // 玩家狀態
-let playerState = { 
-    lane: 1,        // 當前車道 (0, 1, 2)
-    y: 0,           // 高度
-    vy: 0,          // 垂直速度
-    isJumping: false, 
-    isSliding: false, // 滑行狀態
-    slideTimer: 0,
-    currentX: 0,    // 平滑移動用的當前 X
-    stumble: 0      // 絆倒狀態計時器 (大於0表示被絆倒，保安會靠近)
-};
+let playerState = { lane: 1, y: 0, vy: 0, isJumping: false, isSliding: false, slideTimer: 0, currentX: 0, stumble: 0 };
 
+// 進階狀態
+let distanceTraveled = 0, streak = 0, multiplier = 1;
+let powerupActive = { mult: false, timer: 0, invincible: false, timerInv: 0, magnet: false, timerMag: 0 };
+let newBest = false;
+
+// --- 初始化音效 ---
+function initAudio() {
+    if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+}
+function playSound(freq, duration, type = 'sine') {
+    initAudio();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.frequency.value = freq;
+    osc.type = type;
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + duration);
+}
+
+// --- 初始化遊戲 ---
 function init() {
-    // 1. 場景設置
+    // 場景
     scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x81ecec); // 天空藍
-    scene.fog = new THREE.Fog(0x81ecec, 30, 120); // 遠處霧氣
+    scene.background = new THREE.Color(0x87ceeb);
+    scene.fog = new THREE.FogExp2(0x81ecec, 0.008);
 
-    // 2. 相機設置 (跟隨視角)
-    camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 200);
-    camera.position.set(0, 7, 12); // 相機位於玩家後上方
-    camera.lookAt(0, 2, -10);
+    // 相機
+    camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 300);
+    camera.position.set(0, 8, 15);
 
-    // 3. 渲染器
+    // 渲染器
     renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // 優化效能
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.body.appendChild(renderer.domElement);
 
-    // 4. 燈光
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
-    scene.add(ambientLight);
-
-    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    dirLight.position.set(20, 50, 20);
+    // 燈光
+    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambient);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+    dirLight.position.set(10, 20, 10);
     dirLight.castShadow = true;
-    dirLight.shadow.mapSize.width = 2048;
-    dirLight.shadow.mapSize.height = 2048;
-    dirLight.shadow.camera.left = -20;
-    dirLight.shadow.camera.right = 20;
-    dirLight.shadow.camera.top = 20;
-    dirLight.shadow.camera.bottom = -20;
+    dirLight.shadow.mapSize.set(2048, 2048);
+    dirLight.shadow.camera.left = -25; dirLight.shadow.camera.right = 25;
+    dirLight.shadow.camera.top = 25; dirLight.shadow.camera.bottom = -25;
     scene.add(dirLight);
 
-    // 5. 創建角色
+    // 創建角色
     createPlayer();
     createInspector();
+    playerBodyMat = player.children[0].material; // 身體材質用於閃爍
     createEnvironment();
 
-    // 6. 初始賽道生成
-    for(let i=0; i<6; i++) {
-        spawnTrackSection(i * -40);
+    // 生成初始賽道
+    tracks = [];
+    for (let i = 0; i < 8; i++) {
+        spawnTrackSection(i * -45);
     }
 
-    // 7. 事件監聽
+    // 事件
     setupControls();
+    setupUIEvents();
     window.addEventListener('resize', onResize);
+    document.addEventListener('visibilitychange', () => { paused = document.hidden; });
 
-    // 8. 開始迴圈
     clock = new THREE.Clock();
     animate();
 }
 
-// --- 角色創建 ---
+// --- 角色創建 (更細緻模型) ---
 function createHumanoid(color, isInspector = false) {
     const group = new THREE.Group();
 
     // 身體
-    const bodyGeo = new THREE.BoxGeometry(1.2, 1.5, 0.8);
-    const bodyMat = new THREE.MeshToonMaterial({ color: color });
+    const bodyGeo = new THREE.CapsuleGeometry(0.5, 1.3, 4, 8);
+    const bodyMat = new THREE.MeshToonMaterial({ color });
     const body = new THREE.Mesh(bodyGeo, bodyMat);
-    body.position.y = 1.5;
+    body.position.y = 1.2;
     body.castShadow = true;
     group.add(body);
 
     // 頭部
-    const headGeo = new THREE.SphereGeometry(0.45, 16, 16);
-    const headMat = new THREE.MeshToonMaterial({ color: 0xffccaa }); // 皮膚色
+    const headGeo = new THREE.SphereGeometry(0.45, 16, 12);
+    const headMat = new THREE.MeshToonMaterial({ color: 0xffdbac });
     const head = new THREE.Mesh(headGeo, headMat);
-    head.position.y = 2.8;
+    head.position.y = 2.6;
     head.castShadow = true;
     group.add(head);
 
-    // 四肢 (簡單示意)
-    const limbGeo = new THREE.BoxGeometry(0.4, 1.2, 0.4);
-    const limbMat = new THREE.MeshToonMaterial({ color: 0x2d3436 });
-    
-    // 腿
-    const lLeg = new THREE.Mesh(limbGeo, limbMat); lLeg.position.set(-0.4, 0.6, 0);
-    const rLeg = new THREE.Mesh(limbGeo, limbMat); rLeg.position.set(0.4, 0.6, 0);
-    group.add(lLeg, rLeg);
-
     // 手臂
-    const lArm = new THREE.Mesh(limbGeo, limbMat); lArm.position.set(-0.8, 1.8, 0);
-    const rArm = new THREE.Mesh(limbGeo, limbMat); rArm.position.set(0.8, 1.8, 0);
-    group.add(lArm, rArm);
+    const armGeo = new THREE.CapsuleGeometry(0.18, 0.9, 4, 8);
+    const armMat = new THREE.MeshToonMaterial({ color: 0x34495e });
+    const leftArm = new THREE.Mesh(armGeo, armMat);
+    leftArm.position.set(-0.75, 1.6, 0);
+    leftArm.rotation.z = 0.2;
+    const rightArm = leftArm.clone();
+    rightArm.position.x = 0.75;
+    rightArm.rotation.z = -0.2;
+    group.add(leftArm, rightArm);
 
-    // 保安特徵
+    // 腿
+    const legGeo = new THREE.CapsuleGeometry(0.22, 1.0, 4, 8);
+    const legMat = new THREE.MeshToonMaterial({ color: 0x2c3e50 });
+    const leftLeg = new THREE.Mesh(legGeo, legMat);
+    leftLeg.position.set(-0.3, 0.4, 0);
+    const rightLeg = leftLeg.clone();
+    rightLeg.position.x = 0.3;
+    group.add(leftLeg, rightLeg);
+
+    // 配件
     if (isInspector) {
-        // 帽子
-        const cap = new THREE.Mesh(new THREE.ConeGeometry(0.5, 0.5, 16), new THREE.MeshToonMaterial({ color: 0x2d3436 }));
-        cap.position.set(0, 3.3, 0);
-        group.add(cap);
+        const hatGeo = new THREE.ConeGeometry(0.55, 0.4, 8);
+        const hat = new THREE.Mesh(hatGeo, new THREE.MeshToonMaterial({ color: 0x1e272e }));
+        hat.position.y = 3.1;
+        group.add(hat);
     } else {
-        // 玩家帽子 (反戴鴨舌帽)
-        const hat = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.2, 0.95), new THREE.MeshToonMaterial({ color: 0xff7675 }));
-        hat.position.set(0, 3.3, 0);
-        hat.rotation.y = Math.PI; // 反戴
+        const hatGeo = new THREE.BoxGeometry(1.0, 0.15, 0.9);
+        const hat = new THREE.Mesh(hatGeo, new THREE.MeshToonMaterial({ color: 0xff6b7d }));
+        hat.position.y = 3.1;
+        hat.rotation.z = 0.3;
         group.add(hat);
     }
 
@@ -249,290 +282,350 @@ function createHumanoid(color, isInspector = false) {
 }
 
 function createPlayer() {
-    player = createHumanoid(0x0984e3); // 藍色衣服
+    player = createHumanoid(0x0984e3);
     scene.add(player);
 }
 
 function createInspector() {
-    inspector = createHumanoid(0x2d3436, true); // 黑色制服
-    inspector.position.z = 8; // 初始在玩家身後
+    inspector = createHumanoid(0x2d3436, true);
+    inspector.position.z = 10;
     scene.add(inspector);
 }
 
-// --- 環境與障礙物 ---
+// --- 環境 ---
 function createEnvironment() {
-    // 兩側牆壁 (模擬地鐵隧道或城市建築)
-    const wallGeo = new THREE.BoxGeometry(2, 20, 400);
-    const wallMat = new THREE.MeshToonMaterial({ color: 0xb2bec3 });
-    
+    // 牆壁
+    const wallMat = new THREE.MeshToonMaterial({ color: 0x95a5a6 });
+    const wallGeo = new THREE.BoxGeometry(3, 25, 500);
     const leftWall = new THREE.Mesh(wallGeo, wallMat);
-    leftWall.position.set(-12, 5, -100);
-    
-    const rightWall = new THREE.Mesh(wallGeo, wallMat);
-    rightWall.position.set(12, 5, -100);
-    
+    leftWall.position.set(-15, 12.5, -200);
+    const rightWall = leftWall.clone();
+    rightWall.position.x = 15;
     scene.add(leftWall, rightWall);
 
-    // 添加遠景雲朵或建築以增加深度 (簡單平面)
-    const skyGeo = new THREE.PlaneGeometry(100, 50);
-    const skyMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.5 });
-    const sky = new THREE.Mesh(skyGeo, skyMat);
-    sky.position.set(0, 30, -100);
-    scene.add(sky);
+    // 隧道燈光支柱
+    const pillarGeo = new THREE.CylinderGeometry(0.4, 0.4, 20);
+    const pillarMat = new THREE.MeshToonMaterial({ color: 0xbdc3c7 });
+    for (let i = -3; i < 3; i++) {
+        const pillar = new THREE.Mesh(pillarGeo, pillarMat);
+        pillar.position.set(17 * (i % 2 ? 1 : -1), 10, i * -50 - 100);
+        pillar.castShadow = true;
+        scene.add(pillar);
+    }
 }
 
 function spawnTrackSection(zPos) {
     // 地面
-    const groundGeo = new THREE.PlaneGeometry(24, 40);
-    const groundMat = new THREE.MeshToonMaterial({ color: 0x636e72 });
+    const groundGeo = new THREE.PlaneGeometry(35, 45);
+    const groundMat = new THREE.MeshLambertMaterial({ color: 0x34495e });
     const ground = new THREE.Mesh(groundGeo, groundMat);
     ground.rotation.x = -Math.PI / 2;
-    ground.position.z = zPos;
+    ground.position.set(0, 0.01, zPos);
     ground.receiveShadow = true;
     scene.add(ground);
     tracks.push(ground);
 
-    // 鐵軌線條 (視覺裝飾)
-    for(let i=0; i<3; i++) {
-        const line = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 40), new THREE.MeshBasicMaterial({color: 0x2d3436}));
-        line.rotation.x = -Math.PI/2;
-        line.position.set(CONFIG.LANES[i], 0.01, zPos);
+    // 車道線
+    for (let i = 0; i < 3; i++) {
+        const lineGeo = new THREE.PlaneGeometry(0.3, 45);
+        const line = new THREE.Mesh(lineGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
+        line.rotation.x = -Math.PI / 2;
+        line.position.set(CONFIG.LANES[i], 0.02, zPos);
         scene.add(line);
-        tracks.push(line); // 一起移動
+        tracks.push(line);
     }
 
-    // 生成障礙物與金幣 (避開前幾個區塊)
-    if (zPos < -20) {
-        generateObstacles(zPos);
-    }
+    if (zPos < -60) generateObstacles(zPos + Math.random() * 20 - 10);
 }
 
+// --- 障礙與物品生成 (多樣化，如 SS) ---
 function generateObstacles(zBase) {
-    // 隨機決定每一道生成什麼
-    const availableLanes = [0, 1, 2];
-    
-    // 隨機選擇 1~3 個車道生成障礙 (增加多樣性)
-    const obsCount = Math.floor(Math.random() * 3) + 1;
-    
-    for(let i=0; i<obsCount; i++) {
-        if(availableLanes.length === 0) break;
-        const laneIdx = availableLanes.splice(Math.floor(Math.random() * availableLanes.length), 1)[0];
+    const lanes = [0, 1, 2];
+    const numObs = Math.floor(Math.random() * 3) + 1; // 1-3 障礙
+
+    for (let i = 0; i < numObs; i++) {
+        if (lanes.length === 0) break;
+        const idx = Math.floor(Math.random() * lanes.length);
+        const laneIdx = lanes.splice(idx, 1)[0];
         const x = CONFIG.LANES[laneIdx];
-        
-        // 多種障礙類型: 20% 火車, 40% 路障, 20% 高欄杆 (需滑行避開), 20% 電源
-        const rand = Math.random();
-        if (rand < 0.2) {
-            spawnTrain(x, zBase);
-        } else if (rand < 0.6) {
-            spawnBarrier(x, zBase);
-        } else if (rand < 0.8) {
-            spawnHighBarrier(x, zBase); // 新: 高欄杆, 需滑行
-        } else if (Math.random() < CONFIG.POWERUP_CHANCE) {
-            spawnPowerup(x, zBase); // 新: 電源
-        }
+
+        const r = Math.random();
+        if (r < 0.25) spawnTrain(x, zBase); // 火車 (致命)
+        else if (r < 0.55) spawnBarrier(x, zBase); // 低障 (跳)
+        else if (r < 0.8) spawnHighBarrier(x, zBase); // 高障 (滑)
+        else spawnPowerup(x, zBase); // 電源
     }
 
-    // 剩下的車道生成金幣
-    availableLanes.forEach(laneIdx => {
-        if(Math.random() > 0.3) {
-            spawnCoins(CONFIG.LANES[laneIdx], zBase, Math.random() > 0.5 ? 'line' : 'arc'); // 新: 直線或弧形金幣
+    // 剩餘車道金幣群
+    lanes.forEach(laneIdx => {
+        if (Math.random() > 0.25) {
+            const pattern = Math.random() > 0.5 ? 'line' : 'arc';
+            spawnCoins(CONFIG.LANES[laneIdx], zBase, pattern);
         }
     });
 }
 
 function spawnTrain(x, z) {
-    const group = new THREE.Group();
-    // 車身
-    const body = new THREE.Mesh(new THREE.BoxGeometry(3.2, 4.5, 12), new THREE.MeshToonMaterial({ color: 0xe17055 }));
-    body.position.y = 2.25;
+    const train = new THREE.Group();
+    const bodyGeo = new THREE.BoxGeometry(4, 5, 15);
+    const body = new THREE.Mesh(bodyGeo, new THREE.MeshToonMaterial({ color: 0xe74c3c }));
+    body.position.y = 2.5;
     body.castShadow = true;
-    
-    // 窗戶
-    const win = new THREE.Mesh(new THREE.BoxGeometry(3.3, 1.5, 8), new THREE.MeshBasicMaterial({ color: 0x74b9ff }));
-    win.position.y = 3;
-    
-    group.add(body, win);
-    group.position.set(x, 0, z);
-    
-    // 碰撞數據
-    group.userData = { type: 'train', fatal: true };
-    
-    scene.add(group);
-    obstacles.push(group);
+    const windows = new THREE.Mesh(new THREE.BoxGeometry(3.8, 2, 10), new THREE.MeshBasicMaterial({ color: 0x3498db }));
+    windows.position.y = 3.2;
+    train.add(body, windows);
+    train.position.set(x, 0, z);
+    train.userData = { type: 'train', fatal: true };
+    scene.add(train);
+    obstacles.push(train);
 }
 
 function spawnBarrier(x, z) {
-    const barrier = new THREE.Mesh(new THREE.BoxGeometry(3, 1.2, 0.5), new THREE.MeshToonMaterial({ color: 0xf39c12 }));
+    const barrier = new THREE.Group();
+    const topGeo = new THREE.BoxGeometry(2.8, 1.0, 0.6);
+    const top = new THREE.Mesh(topGeo, new THREE.MeshToonMaterial({ color: 0xf39c12 }));
+    top.position.y = 0.9;
+    top.castShadow = true;
+    const poleGeo = new THREE.CylinderGeometry(0.15, 0.15, 1.2);
+    const pole1 = new THREE.Mesh(poleGeo, new THREE.MeshBasicMaterial({ color: 0x2c3e50 }));
+    pole1.position.set(-1.1, 0.6, 0);
+    const pole2 = pole1.clone();
+    pole2.position.x = 1.1;
+    barrier.add(top, pole1, pole2);
     barrier.position.set(x, 0.6, z);
-    barrier.castShadow = true;
-    
-    // 支架
-    const leg1 = new THREE.Mesh(new THREE.BoxGeometry(0.2, 1.2, 0.2), new THREE.MeshBasicMaterial({color:0x333}));
-    leg1.position.x = -1.2;
-    const leg2 = leg1.clone();
-    leg2.position.x = 1.2;
-    barrier.add(leg1, leg2);
-
-    barrier.userData = { type: 'barrier', fatal: false, height: 'low' }; // 低障礙, 跳躍避開
+    barrier.userData = { type: 'barrier', height: 'low' };
     scene.add(barrier);
     obstacles.push(barrier);
 }
 
 function spawnHighBarrier(x, z) {
-    const barrier = new THREE.Mesh(new THREE.BoxGeometry(3, 3, 0.5), new THREE.MeshToonMaterial({ color: 0xc0392b }));
-    barrier.position.set(x, 1.5, z);
+    const barrier = new THREE.Mesh(new THREE.BoxGeometry(3.2, 2.8, 0.6), new THREE.MeshToonMaterial({ color: 0xe67e22 }));
+    barrier.position.set(x, 1.8, z);
     barrier.castShadow = true;
-
-    barrier.userData = { type: 'high_barrier', fatal: false, height: 'high' }; // 高障礙, 滑行避開
+    barrier.userData = { type: 'high_barrier', height: 'high' };
     scene.add(barrier);
     obstacles.push(barrier);
 }
 
 function spawnPowerup(x, z) {
-    const powerup = new THREE.Mesh(new THREE.SphereGeometry(0.5, 16, 16), new THREE.MeshToonMaterial({ color: 0x00ff00 }));
-    powerup.position.set(x, 1.5, z);
+    const types = [
+        { color: 0xffff00, subtype: 'mult' }, // x2 分數
+        { color: 0x00ffff, subtype: 'magnet' }, // 磁鐵
+        { color: 0xff4444, subtype: 'invincible' } // 無敵
+    ];
+    const type = types[Math.floor(Math.random() * types.length)];
+    const powerup = new THREE.Mesh(
+        new THREE.OctahedronGeometry(0.6, 0),
+        new THREE.MeshToonMaterial({ color: type.color, emissive: type.color, emissiveIntensity: 0.3 })
+    );
+    powerup.position.set(x, 2, z);
+    powerup.userData = { type: 'powerup', subtype: type.subtype };
     scene.add(powerup);
     powerups.push(powerup);
 }
 
-function spawnCoins(x, zBase, pattern = 'line') {
-    const numCoins = Math.floor(Math.random() * 3) + 3; // 3~5 個金幣
-    for(let i=0; i<numCoins; i++) {
+function spawnCoins(x, zBase, pattern) {
+    const num = 3 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < num; i++) {
         const coin = new THREE.Mesh(
-            new THREE.CylinderGeometry(0.4, 0.4, 0.1, 16), 
-            new THREE.MeshToonMaterial({ color: 0xf1c40f, shininess: 100 })
+            new THREE.CylinderGeometry(0.45, 0.45, 0.12, 12),
+            new THREE.MeshToonMaterial({ color: 0xffd700, emissive: 0xaaaa00, emissiveIntensity: 0.2 })
         );
         coin.rotation.z = Math.PI / 2;
+        const offsetZ = i * 2.5;
         if (pattern === 'arc') {
-            coin.position.set(x, 1.5 + Math.sin(i / numCoins * Math.PI) * 2, zBase + i * 2);
+            const angle = (i / num) * Math.PI;
+            coin.position.set(x + Math.sin(angle) * 1, 1.8 + Math.cos(angle) * 0.8, zBase + offsetZ);
         } else {
-            coin.position.set(x, 1.5, zBase + i * 2);
+            coin.position.set(x, 1.8, zBase + offsetZ);
         }
-        
+        coin.userData = { spinSpeed: 0.08 + Math.random() * 0.04 };
         scene.add(coin);
         coins.push(coin);
     }
 }
 
-// --- 遊戲邏輯 ---
+// --- 更新邏輯 ---
 function animate() {
-    if (!isGameStarted || isGameOver) return requestAnimationFrame(animate);
-    
     requestAnimationFrame(animate);
-    
-    const delta = clock.getDelta();
-    
-    // 1. 難度隨分數增加
-    gameSpeed = CONFIG.BASE_SPEED + (score * CONFIG.SPEED_INC);
+    if (!isGameStarted || isGameOver || paused) return;
 
-    // 2. 玩家物理與移動
-    // 跳躍重力
+    const delta = Math.min(clock.getDelta(), 0.05); // 限制 delta
+
+    // 速度增加
+    gameSpeed = CONFIG.BASE_SPEED + score * CONFIG.SPEED_INC;
+
+    // 計分 (距離 + 倍率)
+    const distanceBonus = gameSpeed * CONFIG.DISTANCE_MULT * multiplier * delta;
+    score += Math.floor(distanceBonus);
+    distanceTraveled += gameSpeed * delta;
+    document.getElementById('score').textContent = score.toLocaleString();
+
+    // 更新倍率
+    updateMultiplier();
+
+    // 玩家物理
+    updatePlayer(delta);
+
+    // 追逐者
+    updateInspector(delta);
+
+    // 物件更新
+    updateObjects(obstacles, true);
+    updateObjects(coins, false);
+    updateObjects(powerups, false, true);
+    updateTracks();
+
+    // 相機跟隨 + 搖晃
+    updateCamera(delta);
+
+    // 燈光閃爍 (隧道效果)
+    scene.children.find(c => c.type === 'DirectionalLight').intensity = 1 + Math.sin(Date.now() * 0.01) * 0.2;
+
+    // 無敵閃爍
+    if (powerupActive.invincible && powerupActive.timerInv > 0) {
+        const flash = Math.sin(Date.now() * 0.03) * 0.5 + 0.5;
+        playerBodyMat.emissive.setHex(flash > 0.5 ? 0x444400 : 0x000000);
+    } else {
+        playerBodyMat.emissive.setHex(0x000000);
+    }
+
+    // 電源計時器
+    if (powerupActive.timer > 0) powerupActive.timer -= delta;
+    if (powerupActive.timerInv > 0) powerupActive.timerInv -= delta;
+    if (powerupActive.timerMag > 0) powerupActive.timerMag -= delta;
+    if (powerupActive.timer <= 0) powerupActive.mult = false;
+    if (powerupActive.timerInv <= 0) powerupActive.invincible = false;
+    if (powerupActive.timerMag <= 0) powerupActive.magnet = false;
+
+    renderer.render(scene, camera);
+}
+
+function updatePlayer(delta) {
+    // 重力 & 跳躍
     if (playerState.isJumping) {
         playerState.vy -= CONFIG.GRAVITY;
         playerState.y += playerState.vy;
         if (playerState.y <= 0) {
             playerState.y = 0;
-            playerState.isJumping = false;
             playerState.vy = 0;
-            // 落地特效 (縮放)
-            player.scale.set(1.2, 0.8, 1.2);
-            setTimeout(() => player.scale.set(1, 1, 1), 100);
+            playerState.isJumping = false;
+            // 落地壓縮
+            player.scale.set(1.15, 0.85, 1.15);
+            setTimeout(() => player.scale.set(1, 1, 1), 150);
+            playSound(400, 0.08, 'square');
         }
     }
-    
-    // 滑行邏輯
+
+    // 滑行
     if (playerState.isSliding) {
         playerState.slideTimer -= delta;
         if (playerState.slideTimer <= 0) {
             playerState.isSliding = false;
-            player.scale.y = 1; // 恢復高度
-            player.position.y = playerState.y;
+            player.scale.y = 1;
         } else {
-            player.scale.y = 0.5; // 蹲下
-            player.position.y = playerState.y * 0.5;
+            player.scale.y = 0.55;
+            player.children[2].rotation.z = 0.8; // 手臂前伸
+            player.children[3].rotation.z = -0.8;
         }
     }
 
-    // 左右平滑移動 (Lerp)
+    // X 移動
     const targetX = CONFIG.LANES[playerState.lane];
-    playerState.currentX += (targetX - playerState.currentX) * 10 * delta;
-    
+    playerState.currentX += (targetX - playerState.currentX) * 12 * delta;
     player.position.set(playerState.currentX, playerState.y, 0);
-    
-    // 跑步動畫 (手臂與腿擺動)
-    if (!playerState.isJumping && !playerState.isSliding) {
-        const time = Date.now() * 0.015;
-        player.children[3].rotation.z = Math.sin(time) * 0.5; // 左腿
-        player.children[4].rotation.z = -Math.sin(time) * 0.5; // 右腿
-        player.children[5].rotation.z = -Math.sin(time) * 0.5; // 左手
-        player.children[6].rotation.z = Math.sin(time) * 0.5; // 右手
-        player.position.y += Math.sin(time) * 0.1;
-    }
-    player.rotation.z = (playerState.currentX - targetX) * -0.1; // 轉向時身體傾斜
 
-    // 3. 保安追逐邏輯
+    // 跑步動畫
+    if (!playerState.isJumping && !playerState.isSliding) {
+        const time = Date.now() * 0.02;
+        player.children[2].rotation.z = Math.sin(time * 1.5) * 0.4; // 左臂
+        player.children[3].rotation.z = -Math.sin(time * 1.5) * 0.4; // 右臂
+        player.children[4].rotation.z = -Math.sin(time * 2) * 0.6; // 左腿
+        player.children[5].rotation.z = Math.sin(time * 2) * 0.6; // 右腿
+        player.position.y += Math.sin(time * 3) * 0.08;
+    }
+
+    // 傾斜
+    const tilt = (playerState.currentX - targetX) * -0.15;
+    player.rotation.z = THREE.MathUtils.lerp(player.rotation.z, tilt, 10 * delta);
+}
+
+function updateInspector(delta) {
     if (playerState.stumble > 0) {
         playerState.stumble -= delta;
-        inspector.position.z += (2 - inspector.position.z) * 5 * delta; // 快速逼近
+        inspector.position.z += (3 - inspector.position.z) * 8 * delta; // 逼近
     } else {
-        inspector.position.z += (8 - inspector.position.z) * 2 * delta; // 慢慢退後
+        inspector.position.z += (12 - inspector.position.z) * 3 * delta; // 退後
     }
-    
-    inspector.position.x += (player.position.x - inspector.position.x) * 5 * delta; // 跟隨玩家 X
-    inspector.position.y = player.position.y; // 跟隨跳躍
+    inspector.position.x += (player.position.x - inspector.position.x) * 8 * delta;
+    inspector.position.y = THREE.MathUtils.lerp(inspector.position.y, player.position.y, 10 * delta);
 
-    // 4. 物件移動 (世界向後捲動)
-    updateObjects(obstacles, true);
-    updateObjects(coins, false);
-    updateObjects(powerups, false, true); // 電源更新
-    updateTracks();
-
-    renderer.render(scene, camera);
+    // 動畫
+    const inspTime = Date.now() * 0.015;
+    inspector.children[4].rotation.z = Math.sin(inspTime) * 0.3; // 腿
+    inspector.children[5].rotation.z = -Math.sin(inspTime) * 0.3;
 }
 
 function updateObjects(list, isObstacle, isPowerup = false) {
     for (let i = list.length - 1; i >= 0; i--) {
         const obj = list[i];
-        obj.position.z += gameSpeed; // 物件向 +Z 移動
+        obj.position.z += gameSpeed;
 
-        // 旋轉金幣或電源
-        if (!isObstacle) obj.rotation.x += 0.05;
+        // 旋轉動畫
+        if (!isObstacle) {
+            obj.rotation.x += obj.userData?.spinSpeed || 0.06;
+            obj.rotation.y += 0.03;
+        }
 
-        // 碰撞檢測
-        if (Math.abs(obj.position.z - player.position.z) < 1.0) { // Z軸重疊
+        // 碰撞 (Z 接近)
+        if (Math.abs(obj.position.z) < 2) {
             const xDist = Math.abs(obj.position.x - player.position.x);
-            
-            if (isObstacle) {
-                if (xDist < 1.0) { // X軸重疊
-                    // 根據類型與玩家狀態判斷
-                    if (obj.userData.height === 'low' && player.position.y > 1.3) {
-                        // 跳過低障礙
-                    } else if (obj.userData.height === 'high' && playerState.isSliding) {
-                        // 滑過高障礙
-                    } else {
+            if (xDist < 1.4) {
+                if (isObstacle) {
+                    // 檢查是否避開
+                    const avoided = (obj.userData.height === 'low' && playerState.y > 1.4) ||
+                                    (obj.userData.height === 'high' && playerState.isSliding);
+                    if (avoided) {
+                        streak++;
+                        score += CONFIG.BONUS_PERFECT * multiplier;
+                        playSound(1200 - streak * 50, 0.1);
+                    } else if (!powerupActive.invincible) {
                         handleCollision(obj);
+                        return;
                     }
-                }
-            } else if (isPowerup) {
-                if (xDist < 1.5 && Math.abs(player.position.y - obj.position.y) < 1.5) {
+                } else if (isPowerup) {
+                    // 電源
+                    activatePowerup(obj.userData.subtype);
                     scene.remove(obj);
                     list.splice(i, 1);
-                    activatePowerup(); // 新: 激活電源效果
-                }
-            } else {
-                // 吃金幣
-                if (xDist < 1.5 && Math.abs(player.position.y - obj.position.y) < 1.5) {
-                    scene.remove(obj);
-                    list.splice(i, 1);
-                    score += 10;
-                    document.getElementById('score').innerText = score;
-                    document.getElementById('coin-sound').play();
+                    playSound(900, 0.25);
+                    continue;
+                } else {
+                    // 金幣 (磁鐵輔助)
+                    const coinDist = player.position.distanceTo(obj.position);
+                    if (coinDist < 2 || (powerupActive.magnet && coinDist < 10)) {
+                        // 磁鐵拉近
+                        if (powerupActive.magnet && coinDist < 10) {
+                            const targetPos = player.position.clone().add(new THREE.Vector3(0, 1.5, -1));
+                            obj.position.lerp(targetPos, 0.2);
+                        } else {
+                            // 收集
+                            scene.remove(obj);
+                            list.splice(i, 1);
+                            score += CONFIG.COIN_BONUS * multiplier;
+                            playSound(800 + Math.random() * 400, 0.12);
+                            // 收集粒子 (簡單 scale explode)
+                            const explode = obj.clone();
+                            explode.scale.set(1.5, 1.5, 1.5);
+                            scene.add(explode);
+                            setTimeout(() => scene.remove(explode), 300);
+                        }
+                    }
                 }
             }
         }
 
-        // 移除超出視野的物件
-        if (obj.position.z > 15) {
+        if (obj.position.z > 20) {
             scene.remove(obj);
             list.splice(i, 1);
         }
@@ -540,118 +633,123 @@ function updateObjects(list, isObstacle, isPowerup = false) {
 }
 
 function handleCollision(obj) {
-    document.getElementById('collision-sound').play();
-    if (obj.userData.fatal) {
-        // 撞火車：直接結束
+    playSound(180, 0.4, 'sawtooth');
+    scene.remove(obj);
+    const idx = obstacles.indexOf(obj);
+    if (idx > -1) obstacles.splice(idx, 1);
+
+    if (obj.userData.fatal || playerState.stumble > 0) {
         gameOver();
     } else {
-        // 撞障礙
-        if (playerState.stumble > 0) {
-            // 已經絆倒過，這次被抓到
-            gameOver();
-        } else {
-            // 第一次絆倒
-            playerState.stumble = 3.0; // 保安追逐 3 秒
-            // 視覺回饋：閃爍
-            player.visible = false;
-            setTimeout(() => player.visible = true, 100);
-            setTimeout(() => player.visible = false, 200);
-            setTimeout(() => player.visible = true, 300);
-            scene.remove(obj);
-            const idx = obstacles.indexOf(obj);
-            if(idx > -1) obstacles.splice(idx, 1);
-        }
+        playerState.stumble = 4.0;
+        streak = 0;
+        // 撞擊動畫
+        player.rotation.x = -0.3;
+        setTimeout(() => player.rotation.x = 0, 300);
     }
 }
 
-function activatePowerup() {
-    // 示例: 雙倍分數 10 秒 (可擴展更多類型)
-    const originalInc = CONFIG.SPEED_INC;
-    CONFIG.SPEED_INC *= 2;
-    setTimeout(() => CONFIG.SPEED_INC = originalInc, 10000);
+function activatePowerup(subtype) {
+    powerupActive.timer = CONFIG.POWERUP_DURATION;
+    switch (subtype) {
+        case 'mult':
+            powerupActive.mult = true;
+            break;
+        case 'magnet':
+            powerupActive.magnet = true;
+            powerupActive.timerMag = CONFIG.POWERUP_DURATION;
+            break;
+        case 'invincible':
+            powerupActive.invincible = true;
+            powerupActive.timerInv = CONFIG.POWERUP_DURATION;
+            break;
+    }
+}
+
+function updateMultiplier() {
+    multiplier = powerupActive.mult ? 2 : Math.floor(1 + streak * 0.25);
+    multiplier = Math.min(multiplier, 8);
+    const multEl = document.getElementById('mult-val');
+    const multUi = document.getElementById('mult-ui');
+    multEl.textContent = multiplier;
+    if (multiplier > 1) {
+        multUi.style.display = 'block';
+    } else {
+        multUi.style.display = 'none';
+    }
 }
 
 function updateTracks() {
-    tracks.forEach(t => {
-        t.position.z += gameSpeed;
-        if (t.position.z > 20) { 
-            t.position.z -= 240; 
-            if (t.geometry.type === 'PlaneGeometry' && t.geometry.parameters.width > 10) {
-                generateObstacles(t.position.z);
+    for (let i = tracks.length - 1; i >= 0; i--) {
+        const track = tracks[i];
+        track.position.z += gameSpeed;
+        if (track.position.z > 25) {
+            track.position.z -= 360; // 8*45
+            if (track.geometry.parameters.width > 20) { // 地面
+                generateObstacles(track.position.z);
             }
         }
-    });
-}
-
-function gameOver() {
-    isGameOver = true;
-    document.getElementById('game-over').style.display = 'block';
-    document.getElementById('final-score').innerText = score;
-    if (score > highScore) {
-        highScore = score;
-        localStorage.setItem('highScore', highScore);
-        document.getElementById('high-score-value').innerText = highScore;
     }
-    
-    // 死亡動畫：玩家倒下
-    player.rotation.x = -Math.PI / 2;
-    player.position.y = 0.5;
-    document.getElementById('bg-music').pause();
 }
 
-// --- 操作控制 ---
+function updateCamera(delta) {
+    // 平滑跟隨
+    const idealX = playerState.currentX * 0.5;
+    camera.position.x += (idealX - camera.position.x) * 10 * delta;
+    camera.position.y += (playerState.y + 6 - camera.position.y) * 8 * delta;
+
+    // 搖晃 (絆倒時)
+    if (playerState.stumble > 0) {
+        camera.position.x += (Math.random() - 0.5) * 0.4;
+        camera.position.y += (Math.random() - 0.5) * 0.2;
+    }
+
+    camera.lookAt(playerState.currentX * 0.3, playerState.y + 1.5, -12);
+}
+
+// --- 控制 ---
 function setupControls() {
     // 鍵盤
-    window.addEventListener('keydown', (e) => {
-        if (isGameOver || !isGameStarted) return;
-        switch(e.key) {
+    document.addEventListener('keydown', (e) => {
+        if (!isGameStarted || isGameOver || paused) return;
+        switch (e.code) {
             case 'ArrowLeft': moveLane(-1); break;
             case 'ArrowRight': moveLane(1); break;
-            case 'ArrowUp': jump(); break;
+            case 'ArrowUp':
+            case 'Space': jump(); break;
             case 'ArrowDown': slide(); break;
-            case ' ': jump(); break;
         }
     });
 
-    // 觸控 (Swipe)
-    let startX, startY;
-    window.addEventListener('touchstart', e => {
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-    }, {passive: false});
-
-    window.addEventListener('touchend', e => {
-        if (isGameOver || !isGameStarted) return;
-        const endX = e.changedTouches[0].clientX;
-        const endY = e.changedTouches[0].clientY;
-        const diffX = endX - startX;
-        const diffY = endY - startY;
-
-        if (Math.abs(diffX) > Math.abs(diffY)) {
-            // 水平滑動
-            if (Math.abs(diffX) > 30) {
-                moveLane(diffX > 0 ? 1 : -1);
-            }
+    // 觸控
+    let touchStartX, touchStartY;
+    document.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }, { passive: false });
+    document.addEventListener('touchend', (e) => {
+        if (!isGameStarted || isGameOver || paused) return;
+        const dx = e.changedTouches[0].clientX - touchStartX;
+        const dy = e.changedTouches[0].clientY - touchStartY;
+        if (Math.abs(dx) > Math.abs(dy)) {
+            if (Math.abs(dx) > 40) moveLane(dx > 0 ? 1 : -1);
         } else {
-            // 垂直滑動
-            if (diffY < -30) jump(); // 上滑跳躍
-            if (diffY > 30) slide(); // 下滑滑行
+            if (dy < -40) jump();
+            if (dy > 40) slide();
         }
-    }, {passive: false});
+    }, { passive: false });
 }
 
 function moveLane(dir) {
     const newLane = playerState.lane + dir;
-    if (newLane >= 0 && newLane <= 2) {
-        playerState.lane = newLane;
-    }
+    if (newLane >= 0 && newLane <= 2) playerState.lane = newLane;
 }
 
 function jump() {
     if (!playerState.isJumping && !playerState.isSliding) {
         playerState.isJumping = true;
         playerState.vy = CONFIG.JUMP_FORCE;
-        document.getElementById('jump-sound').play();
+        playSound(650, 0.15);
     }
 }
 
@@ -659,7 +757,80 @@ function slide() {
     if (!playerState.isSliding && !playerState.isJumping) {
         playerState.isSliding = true;
         playerState.slideTimer = CONFIG.SLIDE_DURATION;
+        playSound(450, 0.12);
     }
+}
+
+// --- UI 事件 ---
+function setupUIEvents() {
+    document.getElementById('start-btn').addEventListener('click', startGame);
+    document.getElementById('restart-btn').addEventListener('click', restartGame);
+}
+
+function startGame() {
+    isGameStarted = true;
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('ui-container').style.opacity = '1';
+    document.getElementById('controls-hint').style.opacity = '0.5';
+    playSound(1000, 0.5); // 開始音
+}
+
+function gameOver() {
+    isGameOver = true;
+    newBest = score > highScore;
+    if (newBest) {
+        highScore = score;
+        localStorage.setItem('subwayRunHighScore', highScore);
+        document.getElementById('high-score-value').textContent = highScore.toLocaleString();
+    }
+    document.getElementById('final-score').textContent = score.toLocaleString();
+    document.getElementById('go-title').textContent = 'BUSTED!';
+    const newBestEl = document.getElementById('new-best');
+    if (newBest) {
+        newBestEl.textContent = 'NEW BEST!';
+        newBestEl.style.display = 'block';
+    }
+    document.getElementById('game-over').style.display = 'block';
+
+    // 死亡動畫
+    player.rotation.x = -Math.PI / 2;
+    player.position.y = 0.75;
+    inspector.position.z = 2;
+}
+
+function restartGame() {
+    // 清空物件
+    obstacles.forEach(o => scene.remove(o)); obstacles = [];
+    coins.forEach(c => scene.remove(c)); coins = [];
+    powerups.forEach(p => scene.remove(p)); powerups = [];
+
+    // 重置狀態
+    playerState = { lane: 1, y: 0, vy: 0, isJumping: false, isSliding: false, slideTimer: 0, currentX: 0, stumble: 0 };
+    player.position.set(0, 0, 0);
+    player.rotation.set(0, 0, 0);
+    player.scale.set(1, 1, 1);
+    inspector.position.set(0, 0, 12);
+    playerBodyMat.emissive.setHex(0x000000);
+
+    score = 0;
+    distanceTraveled = 0;
+    streak = 0;
+    multiplier = 1;
+    Object.assign(powerupActive, { mult: false, timer: 0, invincible: false, timerInv: 0, magnet: false, timerMag: 0 });
+    gameSpeed = CONFIG.BASE_SPEED;
+    isGameOver = false;
+
+    document.getElementById('score').textContent = '0';
+    document.getElementById('mult-ui').style.display = 'none';
+
+    // 重新生成賽道
+    tracks.forEach(t => scene.remove(t));
+    for (let i = 0; i < 8; i++) {
+        spawnTrackSection(i * -45);
+    }
+
+    document.getElementById('game-over').style.display = 'none';
+    document.getElementById('new-best').style.display = 'none';
 }
 
 function onResize() {
@@ -668,16 +839,8 @@ function onResize() {
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
-function startGame() {
-    isGameStarted = true;
-    document.getElementById('start-screen').style.display = 'none';
-    document.getElementById('bg-music').play();
-    animate();
-}
-
-// 啟動遊戲
+// 啟動
 init();
-
 </script>
 </body>
 </html>
