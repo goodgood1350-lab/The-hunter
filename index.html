@@ -243,10 +243,9 @@ function init() {
     // 相機
     camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 400);
     camera.position.set(0, 8, 16);
-    camera.lookAt(0, 2, -10);
 
     // 渲染器
-    renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
@@ -353,13 +352,12 @@ function createHumanoid(color, isInspector = false) {
 
 function createPlayer() {
     player = createHumanoid(0x0984e3);
-    player.position.set(0, 0, 0);
     scene.add(player);
 }
 
 function createInspector() {
     inspector = createHumanoid(0x2d3436, true);
-    inspector.position.set(0, 0, 12);
+    inspector.position.z = 12;
     scene.add(inspector);
 }
 
@@ -418,7 +416,7 @@ function createEnvironment() {
     const pillarMat = new THREE.MeshToonMaterial({ color: 0xbdc3c7 });
     for (let i = -4; i < 5; i++) {
         const pillar = new THREE.Mesh(pillarGeo, pillarMat);
-        pillar.position.set(22 * (i % 2 ? 1 : -1), 12.5, i * -60 - 150);
+        pillar.position.set(22 * Math.sign(i % 2 || -i), 12.5, i * -60 - 150);
         pillar.castShadow = true;
         scene.add(pillar);
 
@@ -653,12 +651,12 @@ function updatePlayer(delta) {
         if (playerState.slideTimer <= 0) {
             playerState.isSliding = false;
             player.scale.y = 1;
-            player.children[2].rotation.z = 0.15;  // 手臂恢復
-            player.children[3].rotation.z = -0.15;
+            player.children[1].rotation.z = 0.15;  // 手臂恢復
+            player.children[2].rotation.z = -0.15;
         } else {
             player.scale.y = 0.52;
-            player.children[2].rotation.z = 0.9;   // 前伸
-            player.children[3].rotation.z = -0.9;
+            player.children[1].rotation.z = 0.9;   // 前伸
+            player.children[2].rotation.z = -0.9;
         }
     }
 
@@ -670,10 +668,10 @@ function updatePlayer(delta) {
     // 跑步動畫 (滑行/跳時停)
     if (!playerState.isJumping && !playerState.isSliding) {
         const time = Date.now() * 0.025;
-        player.children[2].rotation.z = Math.sin(time * 1.8) * 0.45;  // 左臂
-        player.children[3].rotation.z = -Math.sin(time * 1.8) * 0.45; // 右臂
-        player.children[4].rotation.z = -Math.sin(time * 2.2) * 0.65; // 左腿
-        player.children[5].rotation.z = Math.sin(time * 2.2) * 0.65;  // 右腿
+        player.children[1].rotation.z = Math.sin(time * 1.8) * 0.45;  // 左臂
+        player.children[2].rotation.z = -Math.sin(time * 1.8) * 0.45; // 右臂
+        player.children[3].rotation.z = -Math.sin(time * 2.2) * 0.65; // 左腿
+        player.children[4].rotation.z = Math.sin(time * 2.2) * 0.65;  // 右腿
         player.position.y += Math.sin(time * 3.5) * 0.1;
     }
 
@@ -698,8 +696,8 @@ function updateInspector(delta) {
 
     // 追逐動畫
     const time = Date.now() * 0.02;
-    inspector.children[4].rotation.z = Math.sin(time) * 0.4;
-    inspector.children[5].rotation.z = -Math.sin(time) * 0.4;
+    inspector.children[3].rotation.z = Math.sin(time) * 0.4;
+    inspector.children[4].rotation.z = -Math.sin(time) * 0.4;
 }
 
 function updateObjects(list, isObstacle, isPowerup = false) {
@@ -725,10 +723,11 @@ function updateObjects(list, isObstacle, isPowerup = false) {
             if (xDist < CONFIG.PLAYER_HALF_WIDTH + objHalfW) {
                 if (isObstacle) {
                     // 精準避開判定 (y + 狀態)
-                    let avoided = false;
+                    const playerHeadY = playerState.y + 1.2;
+                    const avoided = false;
                     if (obj.userData.height === 'low' && playerState.y > objClearH) {
                         avoided = true;  // 跳過低
-                    } else if (obj.userData.height === 'high' && playerState.isSliding && (playerState.y + 1.2) < objClearH) {
+                    } else if (obj.userData.height === 'high' && playerState.isSliding && playerHeadY < objClearH) {
                         avoided = true;  // 滑過高
                     } else if (obj.userData.fatal) {
                         avoided = false;  // 火車必撞
