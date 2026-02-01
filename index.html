@@ -238,12 +238,12 @@ function init() {
     // 場景 (漂亮背景漸變)
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0x87ceeb);
-    scene.fog = new THREE.FogExp2(0x87ceeb, 0.006);
+    scene.fog = new THREE.FogExp2(0x87ceeb, 0.002);  // 降低霧密度，提高可視距離
 
     // 相機
-    camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 400);
-    camera.position.set(0, 8, 16);
-    camera.lookAt(0, 2, -10);
+    camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 600);
+    camera.position.set(0, 8, 20);  // 調整相機位置以更好地看到場景
+    camera.lookAt(0, 2, -20);  // 調整視角
 
     // 渲染器
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -251,12 +251,13 @@ function init() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.setClearColor(0x87ceeb);  // 確保清除顏色與背景匹配
     document.body.appendChild(renderer.domElement);
 
     // 燈光 (動態隧道燈)
-    const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+    const ambient = new THREE.AmbientLight(0xffffff, 0.8);  // 增加環境光強度
     scene.add(ambient);
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);  // 增加方向光強度
     dirLight.position.set(10, 25, 10);
     dirLight.castShadow = true;
     dirLight.shadow.mapSize.set(2048, 2048);
@@ -279,7 +280,7 @@ function init() {
 
     // 生成初始賽道
     tracks = [];
-    for (let i = 0; i < 10; i++) {  // 更多段確保無縫
+    for (let i = 0; i < 12; i++) {  // 增加更多段確保初始可見
         spawnTrackSection(i * -48);
     }
 
@@ -291,6 +292,9 @@ function init() {
 
     clock = new THREE.Clock();
     animate();
+
+    // 初始渲染一次以確保顯示
+    renderer.render(scene, camera);
 }
 
 // --- 角色創建 ---
@@ -423,7 +427,7 @@ function createEnvironment() {
         scene.add(pillar);
 
         // 點光源 (動態閃爍)
-        const light = new THREE.PointLight(0xffffaa, 1, 30);
+        const light = new THREE.PointLight(0xffffaa, 1.5, 50);  // 增加範圍
         light.position.set(pillar.position.x, 20, pillar.position.z);
         scene.add(light);
     }
@@ -653,12 +657,12 @@ function updatePlayer(delta) {
         if (playerState.slideTimer <= 0) {
             playerState.isSliding = false;
             player.scale.y = 1;
-            player.children[2].rotation.z = 0.15;  // 手臂恢復
-            player.children[3].rotation.z = -0.15;
+            player.children[2].rotation.z = 0.15;  // 手臂恢復 (leftArm)
+            player.children[3].rotation.z = -0.15; // rightArm
         } else {
             player.scale.y = 0.52;
-            player.children[2].rotation.z = 0.9;   // 前伸
-            player.children[3].rotation.z = -0.9;
+            player.children[2].rotation.z = 0.9;   // 前伸 leftArm
+            player.children[3].rotation.z = -0.9; // rightArm
         }
     }
 
