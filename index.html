@@ -1,1 +1,125 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Subway Run 3D - Ultimate Edition</title>
+    <style>
+        body { 
+            margin: 0; overflow: hidden; background: linear-gradient(to bottom, #87ceeb, #4682b4); 
+            font-family: 'Arial Black', sans-serif; touch-action: none; user-select: none; 
+        }
+        
+        /* UI 容器 */
+        #ui-container { 
+            position: absolute; top: 5%; left: 5%; opacity: 0; transition: opacity 0.5s ease-in-out;
+            color: #fff; text-shadow: 3px 3px 0px #f0932b; font-size: 32px; z-index: 10; pointer-events: none; 
+            font-style: italic;
+        }
+        #score-display { font-size: 36px; }
+        
+        #high-score { 
+            position: absolute; top: 5%; right: 5%; opacity: 1; 
+            color: #fff; text-shadow: 3px 3px 0px #f0932b; font-size: 24px; z-index: 10; pointer-events: none; 
+            font-style: italic;
+        }
+        
+        #mult-ui { 
+            position: absolute; top: 12%; left: 5%; display: none;
+            color: #ffd700; text-shadow: 2px 2px 0px #000; font-size: 28px; z-index: 10; pointer-events: none; 
+            font-style: italic; font-weight: bold; animation: multGlow 1s infinite alternate;
+        }
+        @keyframes multGlow { 0% { text-shadow: 0 0 10px #ffd700; } 100% { text-shadow: 0 0 30px #ffd700; } }
+        
+        /* 完美計分 Pop-up */
+        .score-pop {
+            position: absolute; color: #ffd700; font-size: 48px; font-weight: bold; z-index: 15;
+            text-shadow: 2px 2px 4px #000; pointer-events: none; opacity: 0;
+            animation: scorePop 0.8s ease-out forwards;
+        }
+        @keyframes scorePop {
+            0% { transform: translateY(-50px) scale(0.5); opacity: 1; }
+            50% { transform: translateY(-20px) scale(1.2); }
+            100% { transform: translateY(-100px) scale(1); opacity: 0; }
+        }
+        
+        /* 開始畫面 */
+        #start-screen { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.98); color: #2f3542; padding: 50px 40px; text-align: center;
+            border-radius: 30px; box-shadow: 0 25px 0px #e67e22; z-index: 20; width: 320px;
+            backdrop-filter: blur(15px); animation: startBounce 2s infinite;
+        }
+        @keyframes startBounce { 0%, 100% { transform: translate(-50%, -50%) scale(1); } 50% { transform: translate(-50%, -50%) scale(1.02); } }
+        #start-screen h1 { animation: bounce 2s infinite; margin: 0 0 20px 0; color: #c0392b; text-transform: uppercase; }
+        #start-screen button { animation: pulse 1.5s infinite; background: linear-gradient(45deg, #f0932b, #e67e22); color: white; border: none; padding: 20px 40px; font-size: 28px; border-radius: 25px; cursor: pointer; width: 100%; box-shadow: 0 12px 0px #d35400; font-weight: bold; transition: all 0.15s; }
+        #start-screen button:active { transform: translateY(6px); box-shadow: 0 6px 0px #d35400; }
+        
+        /* 遊戲結束畫面 */
+        #game-over { 
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.98); color: #2f3542; padding: 50px; text-align: center;
+            display: none; border-radius: 30px; box-shadow: 0 25px 0px #e67e22; z-index: 20; width: 320px;
+            backdrop-filter: blur(15px);
+        }
+        #game-over h1 { margin: 0 0 15px 0; color: #c0392b; text-transform: uppercase; }
+        #new-best { color: #ffd700; font-size: 26px; font-weight: bold; animation: glow 1s infinite alternate; margin: 10px 0; }
+        @keyframes glow { 0% { text-shadow: 0 0 10px #ffd700; } 100% { text-shadow: 0 0 30px #ffd700; } }
+        #game-over button { background: linear-gradient(45deg, #f0932b, #e67e22); color: white; border: none; padding: 18px 35px; font-size: 26px; border-radius: 20px; cursor: pointer; margin-top: 25px; width: 100%; box-shadow: 0 10px 0px #d35400; font-weight: bold; transition: all 0.15s; }
+        #game-over button:active { transform: translateY(5px); box-shadow: 0 5px 0px #d35400; }
 
+        @keyframes bounce { 0%, 20%, 50%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-20px); } 60% { transform: translateY(-10px); } }
+        @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(240,147,43,0.7); } 70% { box-shadow: 0 0 0 30px rgba(240,147,43,0); } 100% { box-shadow: 0 0 0 0 rgba(240,147,43,0); } }
+
+        /* 操作提示 */
+        #controls-hint {
+            position: absolute; bottom: 25px; width: 100%; text-align: center;
+            color: rgba(255,255,255,0.9); font-size: 18px; pointer-events: none;
+            text-shadow: 2px 2px 4px #000; transition: opacity 0.5s;
+        }
+
+        /* 全屏閃光效果 (畫面級正向回饋) */
+        #flash-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8);
+            pointer-events: none; z-index: 25; opacity: 0; transition: opacity 0.2s;
+        }
+    </style>
+</head>
+<body>
+
+<div id="ui-container">
+    <div id="score-display">SCORE: <span id="score">0</span></div>
+    <div id="mult-ui">x <span id="mult-val">1</span></div>
+</div>
+<div id="high-score">HIGH: <span id="high-score-value">0</span></div>
+
+<div id="flash-overlay"></div>
+
+<div id="start-screen">
+    <h1>Subway Run 3D</h1>
+    <p>Ultimate Edition</p>
+    <button id="start-btn">START RUNNING</button>
+    <p style="font-size:16px; margin-top:25px; opacity:0.8;">空中換線 • 跳躍取消滑行 • 極致流暢</p>
+</div>
+
+<div id="game-over">
+    <h1 id="go-title">BUSTED!</h1>
+    <p>稽查員抓住你了！</p>
+    <p style="font-size:26px; color:#2c3e50;">Score: <span id="final-score">0</span></p>
+    <div id="new-best" style="display:none;"></div>
+    <button id="restart-btn">RUN AGAIN</button>
+</div>
+
+<div id="controls-hint">← → 換線 | ↑ 跳躍 | ↓ 滑行/取消跳躍</div>
+
+<script type="importmap">
+{
+    "imports": {
+        "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
+    }
+}
+</script>
+
+<script type="module" src="main.js"></script>
+</body>
+</html>
